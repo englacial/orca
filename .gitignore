@@ -20,3 +20,5 @@ __pycache__/
 # Notebooks
 
 .ipynb_checkpoints
+# HIL scratch symlink (points at the fixture data drive)
+hil_scratch

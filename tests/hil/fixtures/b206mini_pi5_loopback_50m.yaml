@@ -1,0 +1,38 @@
+fixture_id: b206mini_pi5_loopback_50m
+description: B206mini-i loopback, 30 dB pad at TX, 50 m coax
+hardware:
+  sdr_model: B206mini-i
+  sdr_serial: "36B5C60"
+  attenuator_db: 30
+  cable:
+    type: LMR-100
+    length_m: 50.0
+    velocity_factor: 0.66
+  adapters: []                   # TODO: list any adapters/barrels
+host:
+  model: Raspberry Pi 5
+  data_root: /mnt/nvme/orca-hil
+uhd:
+  source_dir: ~/uhd
+  install_prefix: ~/uhd-patched
+  expected_commit: c87abfbe8fb96cd1dc9e5d10fcf50d792b60c452
+  fpga_image: usrp_b205mini_fpga.bin   # the B206mini uses the B205mini image
+  env:
+    UHD_IMAGES_DIR: ~/uhd-patched/share/uhd/images
+storage:
+  kept_raw_quota_gb: 100
+  run_retention_days: 60
+safety:
+  tx_gain_max: 75
+  rx_clip_fraction_max: 0.9
+  attenuator_check:
+    tx_gain: null                # set at commissioning
+    expected_peak_dbfs: null     # set at commissioning
+    tolerance_db: 6
+rf_base:
+  freq: 330.0e6
+  tx_gain: null                  # set at commissioning
+  rx_gain: null                  # set at commissioning
+calibration:
+  tx_power_table: null
+  path_loss_db: null
