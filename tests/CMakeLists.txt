@@ -46,7 +46,7 @@ target_link_libraries(test_chirp
 target_compile_definitions(test_sdr PRIVATE CONFIG_DIR="${CMAKE_CURRENT_SOURCE_DIR}/../config")
 target_include_directories(test_sdr PRIVATE ../sdr)
 target_link_libraries(test_sdr
-    uhd
+    ${UHD_LIBRARIES}
     gtest_main
     Boost::filesystem
     yaml-cpp
