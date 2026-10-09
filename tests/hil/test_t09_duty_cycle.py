@@ -1,4 +1,4 @@
-"""T9 - Duty cycle vs error rate (Fig. 9).
+"""T9 - Duty cycle vs error rate (Fig. 9). 100% duty is not a supported operating point.
 
 Duty cycle = max(tx_duration, rx_duration) / PRI, as in
 tests/error_code_late_command_sweep.py (full duplex).
@@ -16,7 +16,7 @@ PARAMS = {
     "fast": {"duties": [0.5, 0.75, 0.9], "n_pulses": 50000,
              "report_at": {0.5: "error_rate_at_50pct", 0.75: "error_rate_at_75pct"}},
     # Plan: 1e6 pulses per point; 5e5 keeps the sweep near its ~35 min estimate (1e6 takes ~1 h)
-    "full": {"duties": [round(d, 2) for d in np.arange(0.2, 1.0 + 1e-9, 0.05)], "n_pulses": 500000,
+    "full": {"duties": [round(d, 2) for d in np.arange(0.2, 0.95 + 1e-9, 0.05)], "n_pulses": 500000,
              "report_at": {0.5: "error_rate_at_50pct"}},
 }
 
