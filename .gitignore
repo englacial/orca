@@ -22,3 +22,6 @@ __pycache__/
 .ipynb_checkpoints
 # HIL scratch symlink (points at the fixture data drive)
 hil_scratch
+# Written to the repo root by run.py
+gpspipe_stdout.log
+track.gpx

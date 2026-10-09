@@ -28,6 +28,7 @@ def _make_case(root, name="a_profile"):
     (case / "20260101_000000.zarr").mkdir()
     _fill(case / "20260101_000000.zarr" / "chunk", 10)
     _fill(case / "config.yaml", 5)
+    _fill(case / "merged_rx_samps.bin", 10)
     return case
 
 

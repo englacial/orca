@@ -3,6 +3,7 @@
 main.cpp needs FILES.output_dir to be repo-relative, so captures go under the
 gitignored ``<repo>/hil_scratch`` symlink, which points at ``<data_root>/scratch``.
 """
+import re
 import shutil
 import time
 from pathlib import Path
@@ -10,7 +11,8 @@ from pathlib import Path
 from . import REPO_ROOT
 
 SCRATCH_LINK_NAME = "hil_scratch"
-RAW_SUFFIXES = ("_rx_samps.bin", "_config.yaml", "_uhd_stdout.log")
+# save_data prefix files: <YYYYMMDD_HHMMSS>[_p<N>]_{rx_samps.bin, config.yaml, uhd_stdout.log}
+RAW_FILE_RE = re.compile(r"^\d{8}_\d{6}(_p\d+)?_(rx_samps\.bin|config\.yaml|uhd_stdout\.log)$")
 
 
 def ensure_scratch_link(data_root, repo_root=REPO_ROOT) -> Path:
@@ -28,9 +30,15 @@ def ensure_scratch_link(data_root, repo_root=REPO_ROOT) -> Path:
     return link
 
 
+def run_scratch_dir(run_id, repo_root=REPO_ROOT) -> Path:
+    if not run_id:
+        raise ValueError("empty run_id")
+    return Path(repo_root) / SCRATCH_LINK_NAME / run_id
+
+
 def case_dir(run_id, test_id, case, repo_root=REPO_ROOT) -> Path:
     """Unique per-capture directory (save_data prefixes only have 1 s resolution)."""
-    return Path(repo_root) / SCRATCH_LINK_NAME / run_id / test_id / case
+    return run_scratch_dir(run_id, repo_root) / test_id / case
 
 
 def dir_size(path) -> int:
@@ -42,8 +50,7 @@ def dir_size(path) -> int:
 
 def raw_files(directory):
     """Raw prefix files written by save_data (including split-file parts)."""
-    return sorted(p for p in Path(directory).iterdir()
-                  if p.is_file() and p.name.endswith(RAW_SUFFIXES))
+    return sorted(p for p in Path(directory).iterdir() if p.is_file() and RAW_FILE_RE.match(p.name))
 
 
 def release_case(case_path, passed, kept_root, run_id, test_id, keep_raw=False):

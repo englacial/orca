@@ -25,7 +25,13 @@ hardware-cxx-test:
 	@echo "Running C++ hardware tests.."
 	ctest --test-dir sdr/build --output-on-failure
 # Hardware-in-the-loop test harness (see tests/hil)
-.PHONY: hil-unit hil-build-uhd
+.PHONY: hil-fast hil-full hil-unit hil-build-uhd
+hil-fast:
+	pytest tests/hil --hil --tier fast $(HIL_ARGS)
+
+hil-full:
+	pytest tests/hil --hil --tier full $(HIL_ARGS)
+
 hil-unit:
 	pytest tests/hil/unit
 

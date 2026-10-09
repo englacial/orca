@@ -1,3 +1,5 @@
+import zipfile
+
 import numpy as np
 import xarray as xr
 
@@ -12,6 +14,8 @@ def test_reduced_roundtrip(tmp_path):
     path = write_reduced(ds, tmp_path / "reduced.zarr.zip", test_id="t05", run_id="r", git_sha="abc",
                          fixture_id="fx", tier="fast", configs={"a": {"CHIRP": {"num_pulses": np.int64(5)}}})
     assert path.exists()
+    names = zipfile.ZipFile(path).namelist()
+    assert len(names) == len(set(names))
     back = read_reduced(path)
     xr.testing.assert_allclose(back["noise_db"], ds["noise_db"])
     assert back.attrs["test_id"] == "t05"

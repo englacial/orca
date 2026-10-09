@@ -30,13 +30,15 @@ class MetricRecorder:
         ignore_base: baseline-update mode; [base] metrics are recorded but not judged
         """
         self.test_id = test_id
-        self.checks = thresholds.get(test_id, {})
+        self.checks = {**thresholds.get("common", {}), **thresholds.get(test_id, {})}
         self.k = thresholds.get("_k", 4.0)
         self.baselines = baselines
         self.out_dir = out_dir
         self.fixture_suspect = fixture_suspect
         self.ignore_base = ignore_base
         self.records = []
+        self.pre_finalize = []   # callables(recorder) run at the start of finalize()
+        self.finalized = False
         self._t0 = time.time()
 
     def record(self, name, value, case=None, params=None, note=None, inconclusive=False):
@@ -93,6 +95,10 @@ class MetricRecorder:
 
     def finalize(self, fail=True):
         """Write metrics.yaml and, if any metric failed, fail the test listing all failures."""
+        if not self.finalized:
+            for hook in self.pre_finalize:
+                hook(self)
+        self.finalized = True
         if self.out_dir is not None:
             yamlio.dump(self.summary(), self.out_dir / "metrics.yaml")
         if fail and self.failures:

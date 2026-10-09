@@ -14,7 +14,49 @@
 defaults:
   k: 4
 
+# Recorded by every hardware test (telemetry sampler summary)
+common:
+  soc_temp_max_c:        {kind: info, units: degC}
+  throttled_during_test: {kind: info, units: bool}
+
+t00:
+  radar_links_custom_uhd:              {kind: abs, bound: {type: equals, value: true}, units: bool}
+  single_uhd_installed:                {kind: abs, bound: {type: equals, value: true}, units: bool}
+  uhd_stamp_matches_expected_and_head: {kind: abs, bound: {type: equals, value: true}, units: bool}
+  uhd_version_matches_stamp:           {kind: abs, bound: {type: equals, value: true}, units: bool}
+  uhd_images_present:                  {kind: abs, bound: {type: equals, value: true}, units: bool}
+  sdr_serial_match:                    {kind: abs, bound: {type: equals, value: true}, units: bool}
+  antennas_present:                    {kind: abs, bound: {type: equals, value: true}, units: bool}
+  usb_link_mbps:                       {kind: abs, bound: {type: equals, value: 5000}, units: Mb/s}
+  throttled_flags:                     {kind: abs, bound: {type: equals, value: 0}, units: bits}  # vcgencmd bits 0-3 (now)
+  throttled_since_boot_flags:          {kind: info, units: bits}                                  # bits 16-19
+  free_disk_gb:                        {kind: abs, bound: {type: min, value: required}, units: GB}
+  usb_kernel_errors_1h:                {kind: abs, bound: {type: equals, value: 0}, units: count}
+  cxx_hardware_tests_passed:           {kind: info, units: bool}
+  attenuator_check_peak_dbfs:          {kind: base, bound: {type: two_sided, tol: 6.0}, units: dBFS}
+  soc_temp_after_warmup_c:             {kind: base, bound: {type: upper, tol: 10.0}, units: degC}
+
 t01:
+  # Pipeline checks (recorded per case)
+  exit_status_ok:                   {kind: abs, bound: {type: equals, value: true}, units: bool}
+  start_present:                    {kind: abs, bound: {type: equals, value: true}, units: bool}
+  # Late-command errors occur at a low rate in most configurations; zero is not required.
+  # Provisional: this fixture shows 0.2-1.8% at the base settings, mostly in bursts (Phase 5).
+  error_rate:                       {kind: abs, bound: {type: max, value: 0.02}, units: fraction}
+  pulses_written_equals_requested:  {kind: abs, bound: {type: equals, value: true}, units: bool}
+  file_size_matches:                {kind: abs, bound: {type: equals, value: true}, units: bool}
+  config_matches_generated:         {kind: abs, bound: {type: equals, value: true}, units: bool}
+  zarr_dims_ok:                     {kind: abs, bound: {type: equals, value: true}, units: bool}
+  error_file_type_ok:               {kind: abs, bound: {type: equals, value: true}, units: bool}
+  sigint_exit_within_10s:           {kind: abs, bound: {type: equals, value: true}, units: bool}
+  records_positive:                 {kind: abs, bound: {type: equals, value: true}, units: bool}
+  file_size_multiple_of_record:     {kind: abs, bound: {type: equals, value: true}, units: bool}
+  rx_summary_present:               {kind: abs, bound: {type: equals, value: true}, units: bool}
+  close_file_count_matches_parts:   {kind: abs, bound: {type: equals, value: true}, units: bool}
+  merged_matches_parts:             {kind: abs, bound: {type: equals, value: true}, units: bool}
+  radar_links_custom_uhd_after_runpy: {kind: abs, bound: {type: equals, value: true}, units: bool}
+  radar_binary_changed_by_runpy:    {kind: info, units: bool}
+  # Range profile (case a_profile)
   leakage_peak_index:           {kind: base, bound: {type: two_sided, tol: 0.1}, units: samples}
   peak_separation_samples:
     - {kind: abs, bound: {type: range_about, center: expected, tol: 1.5}, units: samples}

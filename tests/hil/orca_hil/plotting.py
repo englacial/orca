@@ -32,7 +32,7 @@ def summary_figure(test_id, figure_ref, run_id, status, nrows=1, ncols=1, **kwar
     """Create a figure with the standard size and title. Returns (fig, axes)."""
     with plt.rc_context(STYLE):
         fig, axes = plt.subplots(nrows, ncols, figsize=FIGSIZE, dpi=DPI, squeeze=False, **kwargs)
-    title = f"{test_id.upper()} — {figure_ref}   |   {run_id}   |   "
+    title = f"{test_id.upper()} — {figure_ref}   |   {run_id}"
     fig.suptitle(title, x=0.01, ha="left", fontsize=11)
     fig.text(0.99, 0.985, status.upper(), ha="right", va="top", fontsize=11, weight="bold",
              color=STATUS_COLORS.get(status, "black"))
