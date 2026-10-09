@@ -48,6 +48,14 @@ Every metric is listed in `thresholds.yaml` as `abs` (valid on any healthy
 fixture), `base` (relative to this fixture's baseline in `baselines/`) or
 `info`. Without a baseline, `base` metrics are reported as inconclusive.
 
+Baselines are kept per tier. To re-measure them (clean git tree required; commit
+the result through a PR):
+
+```bash
+make hil-fast HIL_ARGS="--update-baseline --baseline-repeats 5"
+make hil-full HIL_ARGS="--update-baseline --baseline-repeats 3"
+```
+
 ## Commissioning a fixture
 
 ```bash

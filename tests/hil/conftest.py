@@ -235,7 +235,7 @@ def thresholds():
 
 @pytest.fixture(scope="session")
 def baselines(hil):
-    return Baselines(hil.fixture_id)
+    return Baselines(hil.fixture_id, hil.tier)
 
 
 @pytest.fixture

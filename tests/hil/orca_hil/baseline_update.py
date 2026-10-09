@@ -89,9 +89,9 @@ def _reduced_attr(run_dir, tid, key):
     return read_reduced(p).attrs.get(key) if p.exists() else None
 
 
-def update_baselines(fixture_id, run_dirs, git_sha, directory=None):
+def update_baselines(fixture_id, tier, run_dirs, git_sha, directory=None):
     """Write mean/std/n of every [base] metric, the T3/T4 line lists and reference zarrs."""
-    b = Baselines(fixture_id) if directory is None else Baselines(fixture_id, directory)
+    b = Baselines(fixture_id, tier) if directory is None else Baselines(fixture_id, tier, directory)
     values = collect_base_values(run_dirs)
     for tid, metrics in values.items():
         for (name, case), vals in sorted(metrics.items(), key=lambda kv: (kv[0][0], kv[0][1] or "")):
@@ -128,7 +128,7 @@ def main_from_pytest(config):
         print("baseline update: no run directories produced", file=sys.stderr)
         return 1
     run = yamlio.load(run_dirs[-1] / "run.yaml")
-    b, values = update_baselines(run["fixture_id"], run_dirs, run["git_sha"])
+    b, values = update_baselines(run["fixture_id"], run["tier"], run_dirs, run["git_sha"])
     n_metrics = sum(len(v) for v in values.values())
     print(f"\nbaseline update: {n_metrics} [base] metrics from {len(run_dirs)} runs -> {b.path}")
     for rd, c in zip(run_dirs, codes):

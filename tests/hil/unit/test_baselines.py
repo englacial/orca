@@ -30,3 +30,9 @@ def test_update_save_reload_keeps_comments(tmp_path):
     out = b2.path.read_text()
     assert "# re-baselined after adapter swap" in out and "git_sha: def5678" in out
     assert b2.reference_path("t01").name == "t01_reference.zarr.zip"
+    assert b2.reference_path("t01").parent.name == "fast"
+    full = Baselines("fx", "full", directory=tmp_path)
+    assert full.get("t01", "loopback_peak_power_dbfs") is None
+    full.update_scalar("t01", "loopback_peak_power_dbfs", [-30.0], runs=["d"])
+    full.save()
+    assert Baselines("fx", directory=tmp_path).get("t01", "loopback_peak_power_dbfs")["n"] == 2

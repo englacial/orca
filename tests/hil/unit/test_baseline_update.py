@@ -37,8 +37,10 @@ def test_collect_and_update(tmp_path):
     runs.append(_run(tmp_path, "r3", [m(math.nan), m(-60.0, status="inconclusive")]))
     vals = collect_base_values(runs)
     assert sorted(v for v, _ in vals["t01"][("loopback_peak_power_dbfs", None)]) == [-52.2, -52.0, -51.8]
-    b, _ = update_baselines("fx", runs, "abc", directory=tmp_path / "baselines")
+    b, _ = update_baselines("fx", "full", runs, "abc", directory=tmp_path / "baselines")
     got = b.get("t01", "loopback_peak_power_dbfs")
     assert abs(got["mean"] + 52.0) < 1e-9 and abs(got["std"] - 0.2) < 1e-9 and got["n"] == 3
     assert b.get("t01", "loopback_peak_power_dbfs", case="x")["n"] == 3
     assert (tmp_path / "baselines" / "fx.yaml").exists()
+    from tests.hil.orca_hil.baselines import Baselines
+    assert Baselines("fx", "fast", tmp_path / "baselines").get("t01", "loopback_peak_power_dbfs") is None
