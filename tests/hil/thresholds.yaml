@@ -73,9 +73,13 @@ t02:  # per window (case)
   pslr_minus_ideal_db:     {kind: abs, bound: {type: range, lo: -1.5, hi: 1.5}, units: dB}
   mainlobe_width_ratio:    {kind: abs, bound: {type: range, lo: 0.9, hi: 1.1}, units: ratio}
   islr_minus_ideal_db:     {kind: base, bound: {type: upper, tol: 1.5}, units: dB}
-  # Extent is measured where the response exceeds the stacked noise floor + 6 dB,
-  # so it depends on the window and the stacking depth. Tune in Phase 5.
-  sidelobe_extent_samples: {kind: abs, bound: {type: range_about, center: chirp_length, tol: 5}, units: samples}
+  # PSLR/ISLR exclude +/-2 samples at 1-3 cable round trips after the peak (reflections)
+  # and one round trip before it (internal-leakage model residual).
+  # Plan metric sidelobe_extent_samples (vs chirp length): measured where the response
+  # exceeds the stacked noise floor + 15 dB, and compared with the ideal response at the
+  # same floor, since a tapered window's sidelobes drop below any floor before chirp length.
+  sidelobe_extent_minus_ideal_samples: {kind: abs, bound: {type: range, lo: -10, hi: 10}, units: samples}
+  first_echo_db:           {kind: info, units: dB}
 
 t03:
   noise_power_dbfs:        {kind: base, bound: {type: two_sided, tol: 1.5}, units: dBFS}
@@ -89,6 +93,23 @@ t03:
   tx_isolation_margin_db:  {kind: abs, bound: {type: max, value: 3.0}, units: dB}
   noise_at_nmax_dbfs:      {kind: base, bound: {type: upper, tol: 3.0}, units: dBFS}
 
+t04:
+  # LO leakage is measured before the first received chirp. If the dithered case is at
+  # the DC estimate's noise floor, the suppression is a lower bound (inconclusive if < 20 dB).
+  lo_leakage_rel_chirp_db:             {kind: base, bound: {type: two_sided, tol: 3.0}, units: dB}
+  lo_leakage_suppression_by_dither_db: {kind: abs, bound: {type: min, value: 20.0}, units: dB}
+  # DC after the chirp: with lo_offset_sw = 0 this fixture shows a signal-derived DC tail
+  # that is coherent with the dithered TX signal (not removed by dithering).
+  post_chirp_dc_rel_chirp_db:          {kind: info, units: dB}
+  # Plan lists these as [base]; they compare against the baseline spur list, so they are
+  # recorded as abs checks and are inconclusive until that list exists.
+  spur_freqs_match:                    {kind: abs, bound: {type: equals, value: true}, units: bool}
+  new_spurs_above_baseline:            {kind: abs, bound: {type: equals, value: 0}, units: count}
+  # Ratio to the -10 dB bandwidth of the ideal received chirps (a windowed chirp's -10 dB
+  # bandwidth is narrower than chirp_bandwidth, e.g. ~0.66x for hamming).
+  occupied_bw_ratio:                   {kind: abs, bound: {type: range, lo: 0.95, hi: 1.05}, units: ratio}
+  center_offset_error_mhz:             {kind: abs, bound: {type: max, value: 0.5}, units: MHz}
+
 t05:
   slope_db_per_decade:              {kind: abs, bound: {type: range, lo: -11.0, hi: -9.0}, units: dB/decade}
   deviation_from_theory_at_nmax_db: {kind: abs, bound: {type: max, value: 3.0}, units: dB}
@@ -96,6 +117,44 @@ t05:
   plateau_onset_n:                  {kind: base, bound: {type: factor_two_sided, factor: 3}, units: pulses}
   dither_gain_at_nmax_db:           {kind: base, bound: {type: lower, tol: 3.0}, units: dB}
   signal_peak_loss_at_nmax_db:      {kind: abs, bound: {type: max, value: 0.2}, units: dB}
+  # Dithered cases whose chirp spans DC (lo_offset_sw = 0): a signal-derived DC tail
+  # limits the floor on this fixture, so these are judged against the baseline.
+  dc_chirp_slope_db_per_decade:              {kind: base, bound: {type: two_sided, tol: 1.0}, units: dB/decade}
+  dc_chirp_deviation_from_theory_at_nmax_db: {kind: base, bound: {type: upper, tol: 2.0}, units: dB}
+
+t08:
+  tx_sweep_slope_db_per_db: {kind: abs, bound: {type: range, lo: 0.95, hi: 1.05}, units: dB/dB}
+  rx_sweep_slope_db_per_db: {kind: abs, bound: {type: range, lo: 0.95, hi: 1.05}, units: dB/dB}
+  p1db_tx_gain:             {kind: base, bound: {type: two_sided, tol: 2.0}, units: dB}
+  dbfs_at_base_gain:        {kind: base, bound: {type: two_sided, tol: 1.0}, units: dBFS}
+  dynamic_range_db:         {kind: base, bound: {type: two_sided, tol: 2.0}, units: dB}
+
+t09:
+  error_rate:                          {kind: info, units: fraction}   # per duty point
+  records_written_equals_requested:    {kind: abs, bound: {type: equals, value: true}, units: bool}
+  process_killed:                      {kind: abs, bound: {type: equals, value: false}, units: bool}
+  # Plan value 0.005; this fixture shows ~1% even at low duty (bursts). Provisional (Phase 5).
+  error_rate_at_50pct:                 {kind: abs, bound: {type: max, value: 0.02}, units: fraction}
+  error_rate_at_75pct:                 {kind: base, bound: {type: upper, tol: 0.02}, units: fraction}
+  max_duty_with_error_rate_below_2pct: {kind: base, bound: {type: lower, tol: 0.10}, units: fraction}
+  throttled_during_sweep:              {kind: abs, bound: {type: equals, value: false}, units: bool}
+
+t10:
+  error_rate:                              {kind: info, units: fraction}
+  records_times_presums_equals_requested:  {kind: abs, bound: {type: equals, value: true}, units: bool}
+  error_file_type_is_not_included:         {kind: abs, bound: {type: equals, value: true}, units: bool}
+  time_offset_increases_logged:            {kind: abs, bound: {type: equals, value: true}, units: bool}
+  max_gap_phase_jump_sigma:                {kind: abs, bound: {type: max, value: 3.0}, units: sigma}
+  stacked_power_change_after_errors_db:    {kind: abs, bound: {type: max, value: 0.2}, units: dB}
+  record_power_drop_after_first_error_db:  {kind: abs, bound: {type: max, value: 0.5}, units: dB}
+  probe_duty:                              {kind: info, units: fraction}
+
+t11:  # powers are normalized by each capture's internal-leakage peak
+  peak_power_diff_db:            {kind: abs, bound: {type: max, value: 0.2}, units: dB}
+  noise_power_diff_db:           {kind: abs, bound: {type: max, value: 0.5}, units: dB}
+  p100_noise_vs_p1_single_db:    {kind: abs, bound: {type: range, lo: -21.0, hi: -19.0}, units: dB}
+  profile_magnitude_correlation: {kind: abs, bound: {type: min, value: 0.999}, units: ""}
+  capture_gain_diff_db:          {kind: info, units: dB}
 
 session:
   fast_tier_duration_s: {kind: abs, bound: {type: max, value: 600}, units: s}

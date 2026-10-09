@@ -115,11 +115,12 @@ class MainlobeMetrics:
     extent: float | None     # farthest offset where |x|^2 > floor (samples), if floor given
 
 
-def mainlobe_metrics(x, pos, sidelobe_half_width, up=8, floor_power=None):
+def mainlobe_metrics(x, pos, sidelobe_half_width, up=8, floor_power=None, exclude=(), exclude_half_width=2.0):
     """Measure the response peak near ``pos`` in x (raw-rate complex samples).
 
     Sidelobes are taken within +/- sidelobe_half_width samples of the peak,
-    outside the mainlobe (bounded by the first nulls on each side).
+    outside the mainlobe (bounded by the first nulls on each side), and outside
+    +/- exclude_half_width samples around each offset in ``exclude`` (e.g. echoes).
     """
     lo = max(int(np.floor(pos - sidelobe_half_width)) - 8, 0)
     hi = min(int(np.ceil(pos + sidelobe_half_width)) + 9, len(x))
@@ -151,6 +152,8 @@ def mainlobe_metrics(x, pos, sidelobe_half_width, up=8, floor_power=None):
     nl, nr = null(-1), null(+1)
     side = np.abs(t - t[pk]) <= sidelobe_half_width
     side[nl:nr + 1] = False
+    for off in exclude:
+        side &= np.abs(t - t[pk] - off) > exclude_half_width
     main_e = np.sum(p[nl:nr + 1])
     pslr = db10(p[side].max() / peak) if side.any() else -np.inf
     islr = db10(p[side].sum() / main_e) if side.any() else -np.inf

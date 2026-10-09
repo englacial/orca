@@ -47,7 +47,8 @@ def stacking_curves(capture, fixture, max_noise_samples=None):
         sig.append(np.mean(np.abs(pk) ** 2) - npow.mean())
     return {"n": np.array(ns) * P, "noise": np.array(noise_mean), "noise_var": np.array(noise_var),
             "signal": np.array(sig), "presums": P,
-            "dithered": bool(cfg["CHIRP"].get("phase_dithering", False))}
+            "dithered": bool(cfg["CHIRP"].get("phase_dithering", False)),
+            "chirp_has_dc": abs(float(cfg["GENERATE"].get("lo_offset_sw", 0))) < float(cfg["GENERATE"]["chirp_bandwidth"]) / 2}
 
 
 def slope_db_per_decade(n, noise, n_min):
@@ -89,9 +90,12 @@ def analyze_stacking(captures, fixture, params=None):
         n, noise = cv["n"], cv["noise"]
         if cv["dithered"]:
             theory = db10(noise[0]) - 10 * np.log10(n[-1] / n[0])
+            # A chirp spanning DC leaves a signal-derived DC tail in the noise window that
+            # dithering cannot remove, so those cases are judged against the baseline.
+            prefix = "dc_chirp_" if cv["chirp_has_dc"] else ""
             ms += [
-                Measurement("slope_db_per_decade", slope_db_per_decade(n, noise, n_min), case=case),
-                Measurement("deviation_from_theory_at_nmax_db", db10(noise[-1]) - theory, case=case),
+                Measurement(prefix + "slope_db_per_decade", slope_db_per_decade(n, noise, n_min), case=case),
+                Measurement(prefix + "deviation_from_theory_at_nmax_db", db10(noise[-1]) - theory, case=case),
                 Measurement("signal_peak_loss_at_nmax_db",
                             db10(cv["signal"][0]) - db10(cv["signal"][-1]), case=case),
             ]

@@ -85,9 +85,9 @@ def test_t05_slope_plateau_and_dither_gain(radar_cfg, fixture_cfg, make_capture)
     caps = _t05_cases(radar_cfg, make_capture)
     reduced, ms = analyze_stacking(caps, fixture_cfg)
     m = by_name(ms)
-    for case in ("dither", "lo_offset_dither"):
-        assert m[("slope_db_per_decade", case)].value == pytest.approx(-10.0, abs=0.3)
-        assert abs(m[("deviation_from_theory_at_nmax_db", case)].value) < 1.0
+    for case, prefix in (("dither", "dc_chirp_"), ("lo_offset_dither", "")):
+        assert m[(prefix + "slope_db_per_decade", case)].value == pytest.approx(-10.0, abs=0.3)
+        assert abs(m[(prefix + "deviation_from_theory_at_nmax_db", case)].value) < 1.0
         assert abs(m[("signal_peak_loss_at_nmax_db", case)].value) < 0.2
     assert ("slope_db_per_decade", "default") not in m
     assert m[("plateau_onset_n", "default")].value < 3000

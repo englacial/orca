@@ -56,11 +56,13 @@ class CaptureManager:
         self._owned.setdefault(test_id, []).append(cap)
         return cap
 
-    def acquire(self, test_id, case, overrides, stop_after_s=None, shared_key=None, timeout_s=None):
+    def acquire(self, test_id, case, overrides, stop_after_s=None, shared_key=None, timeout_s=None,
+                convert=True):
         if shared_key and shared_key in self._shared:
             return self._shared[shared_key]
         cap = self.new_case(test_id, case, overrides)
-        cap.result = self.runner.run(cap.config_rel, stop_after_s=stop_after_s, timeout_s=timeout_s)
+        cap.result = self.runner.run(cap.config_rel, stop_after_s=stop_after_s, timeout_s=timeout_s,
+                                     convert=convert)
         self.archive(cap)
         if shared_key:
             self._owned[test_id].remove(cap)
@@ -81,6 +83,9 @@ class CaptureManager:
             if src.exists():
                 dest.parent.mkdir(parents=True, exist_ok=True)
                 shutil.copy(src, dest)
+
+    def get_shared(self, key):
+        return self._shared.get(key)
 
     def mark_shared_users(self, keys, passed):
         for k in keys:

@@ -7,7 +7,11 @@ from .common import db10, noise_window_start, open_capture, reference_chirp, ups
 from .peaks import leakage_removed, mainlobe_metrics
 from .profile import UP, locate_peaks
 
-FLOOR_MARGIN_DB = 6.0
+FLOOR_MARGIN_DB = 15.0      # extent threshold above the stacked noise floor (noise peaks stay below)
+# Offsets excluded from PSLR/ISLR, in cable round trips from the loopback peak:
+# -1 is the subtracted internal-leakage peak (model residual), +1..+3 are reflections
+EXCLUDE_ORDERS = (-1, 1, 2, 3)
+ECHO_HALF_WIDTH = 2.0
 
 
 def window_metrics(capture, fixture):
@@ -21,12 +25,27 @@ def window_metrics(capture, fixture):
 
     nstart = noise_window_start(fit.t2, lc)
     floor = np.mean(np.abs(prof[nstart:]) ** 2) * 10 ** (FLOOR_MARGIN_DB / 10) if nstart < len(prof) else None
-    meas = mainlobe_metrics(loop, fit.t2, lc, UP, floor_power=floor)
+    # Reflections in the cable appear one round trip (the peak separation) after the
+    # loopback peak, and the leakage-model residual one round trip before it; neither
+    # is a range sidelobe, so they are excluded (the first echo is reported).
+    sep = fit.t2 - fit.t1
+    excluded = [k * sep for k in EXCLUDE_ORDERS]
+    echoes = [sep]
+    meas = mainlobe_metrics(loop, fit.t2, lc, UP, floor_power=floor, exclude=excluded,
+                            exclude_half_width=ECHO_HALF_WIDTH)
 
     # Ideal response at the same fractional position and level, with the same floor
     n = np.arange(len(prof))
     ideal_x = fit.a2 * resp.at(n - fit.t2)
-    ideal = mainlobe_metrics(ideal_x, fit.t2, lc, UP, floor_power=floor)
+    ideal = mainlobe_metrics(ideal_x, fit.t2, lc, UP, floor_power=floor, exclude=excluded,
+                             exclude_half_width=ECHO_HALF_WIDTH)
+    # Echo level: residual after removing the ideal loopback response, near one round trip
+    resid = loop - ideal_x
+    lo_e = max(int(fit.t2) - 8, 0)
+    lu = upsample(resid[lo_e:int(fit.t2 + echoes[0]) + 9], UP)
+    tu = lo_e + np.arange(len(lu)) / UP
+    near = np.abs(tu - fit.t2 - echoes[0]) <= ECHO_HALF_WIDTH
+    echo_db = float(db10(np.max(np.abs(lu[near]) ** 2) / meas.peak_power))
 
     lo, hi = max(int(fit.t2 - lc) - 8, 0), min(int(fit.t2 + lc) + 9, len(prof))
     curves = {
@@ -34,22 +53,25 @@ def window_metrics(capture, fixture):
         "ideal_db": db10(np.abs(upsample(ideal_x[lo:hi], UP)) ** 2) - db10(ideal.peak_power),
         "offset": lo + np.arange((hi - lo) * UP) / UP - meas.peak_pos,
     }
-    return meas, ideal, lc, curves
+    return meas, ideal, lc, curves, echo_db
 
 
 def analyze_sidelobes(captures, fixture, params=None):
     """captures: {window_name: capture}. Returns (reduced Dataset, [Measurement])."""
     ms, rows = [], {}
     for window, cap in captures.items():
-        meas, ideal, lc, curves = window_metrics(cap, fixture)
+        meas, ideal, lc, curves, echo_db = window_metrics(cap, fixture)
         ms += [
             Measurement("pslr_minus_ideal_db", meas.pslr_db - ideal.pslr_db, case=window),
             Measurement("mainlobe_width_ratio", meas.width_3db / ideal.width_3db, case=window),
             Measurement("islr_minus_ideal_db", meas.islr_db - ideal.islr_db, case=window),
-            Measurement("sidelobe_extent_samples", meas.extent, case=window,
-                        params={"chirp_length": lc},
-                        inconclusive=meas.extent is None, note=None if meas.extent is not None
-                        else "no noise window to set the sidelobe floor"),
+            Measurement("sidelobe_extent_minus_ideal_samples",
+                        meas.extent - ideal.extent if meas.extent is not None else float("nan"), case=window,
+                        inconclusive=meas.extent is None,
+                        note=(f"measured {meas.extent:.1f}, ideal {ideal.extent:.1f} samples"
+                              if meas.extent is not None else "no noise window to set the sidelobe floor")),
+            Measurement("first_echo_db", echo_db, case=window,
+                        note="level one cable round trip after the loopback peak, rel. peak"),
         ]
         rows[window] = (meas, ideal, curves)
 
