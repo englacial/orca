@@ -47,7 +47,7 @@ jobs:
           cmake --build build
 
       - name: Run Python Tests
-        run: conda run -n orca bash -c "PYTHONPATH=. pytest tests/"
+        run: conda run -n orca bash -c "PYTHONPATH=. pytest tests/ --ignore=tests/hil"
 
       - name: Run C++ Tests
         run: ctest --test-dir build --output-on-failure --extra-verbose -E "gpsLock|check10MhzLock|checkAndSetTime|detectChannels|setRFParams|refLoLockDetect|setupGpio"

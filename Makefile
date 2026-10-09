@@ -24,3 +24,11 @@ python-test:
 hardware-cxx-test:
 	@echo "Running C++ hardware tests.."
 	ctest --test-dir sdr/build --output-on-failure
+# Hardware-in-the-loop test harness (see tests/hil)
+.PHONY: hil-unit hil-build-uhd
+hil-unit:
+	pytest tests/hil/unit
+
+# Explicit only; never called by other targets
+hil-build-uhd:
+	tests/hil/scripts/build_uhd.sh

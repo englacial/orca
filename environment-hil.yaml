@@ -1,0 +1,14 @@
+# Extra packages for the hardware-in-the-loop test harness (tests/hil).
+# Apply on top of the ORCA env:  conda env update -n <env> -f environment-hil.yaml
+# UHD is deliberately absent: on the HIL fixture it comes only from a local
+# source build (tests/hil/scripts/build_uhd.sh).
+channels:
+  - conda-forge
+dependencies:
+  - pytest
+  - pytest-timeout
+  - psutil
+  - jinja2
+  - pandas
+  - ruamel.yaml
+  - zarr>=3,<4

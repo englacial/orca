@@ -1,0 +1,29 @@
+name: HIL Replay
+
+# Software-only checks of the hardware-in-the-loop harness (tests/hil).
+# Unit tests run on simulated captures; replay of golden captures is added later.
+
+on:
+  push:
+  pull_request:
+
+jobs:
+  hil-unit:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v3
+
+      - name: Set Up Conda Environment
+        uses: conda-incubator/setup-miniconda@v2
+        with:
+          environment-file: environment-rpi.yaml
+          activate-environment: uhd
+          auto-activate-base: false
+
+      - name: Install HIL Dependencies
+        run: conda env update -n uhd -f environment-hil.yaml
+
+      - name: Run HIL Unit Tests
+        run: conda run -n uhd bash -c "PYTHONPATH=. pytest tests/hil/unit"

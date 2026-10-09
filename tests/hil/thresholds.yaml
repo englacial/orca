@@ -1,0 +1,59 @@
+# HIL metric thresholds. Every metric a test records must be listed here.
+#
+# kind:  abs  - physics/paper-derived, valid on any healthy fixture
+#        base - relative to this fixture's baseline (tests/hil/baselines/)
+#        info - recorded, never judged
+# bound types (abs):  range {lo, hi} | range_about {center, tol | rel_tol} | max {value}
+#                     | min {value} | abs_max {value} | equals {value}
+# bound types (base): two_sided {tol} | lower {tol} | upper {tol}   (margin = max(tol, k*std))
+#                     | ratio_upper {factor[, floor]} | factor_two_sided {factor}
+# String values in a bound are filled in by the test (e.g. center: expected).
+#
+# All values are provisional until Phase 5 (baselines and tuning).
+
+defaults:
+  k: 4
+
+t01:
+  leakage_peak_index:           {kind: base, bound: {type: two_sided, tol: 0.1}, units: samples}
+  peak_separation_samples:
+    - {kind: abs, bound: {type: range_about, center: expected, tol: 1.5}, units: samples}
+    - {kind: base, bound: {type: two_sided, tol: 0.1}, units: samples}
+  loopback_peak_power_dbfs:     {kind: base, bound: {type: two_sided, tol: 1.0}, units: dBFS}
+  loopback_to_leakage_ratio_db: {kind: base, bound: {type: two_sided, tol: 1.0}, units: dB}
+  single_pulse_snr_db:          {kind: base, bound: {type: lower, tol: 2.0}, units: dB}
+  mainlobe_3db_width_samples:   {kind: abs, bound: {type: range_about, center: ideal, rel_tol: 0.1}, units: samples}
+  model_residual_ratio_db:      {kind: base, bound: {type: upper, tol: 3.0}, units: dB}
+  noise_floor_dbfs:             {kind: base, bound: {type: upper, tol: 2.0}, units: dBFS}
+  raw_max_abs_fs:               {kind: abs, bound: {type: max, value: 0.5}, units: FS}
+
+t02:  # per window (case)
+  pslr_minus_ideal_db:     {kind: abs, bound: {type: range, lo: -1.5, hi: 1.5}, units: dB}
+  mainlobe_width_ratio:    {kind: abs, bound: {type: range, lo: 0.9, hi: 1.1}, units: ratio}
+  islr_minus_ideal_db:     {kind: base, bound: {type: upper, tol: 1.5}, units: dB}
+  # Extent is measured where the response exceeds the stacked noise floor + 6 dB,
+  # so it depends on the window and the stacking depth. Tune in Phase 5.
+  sidelobe_extent_samples: {kind: abs, bound: {type: range_about, center: chirp_length, tol: 5}, units: samples}
+
+t03:
+  noise_power_dbfs:        {kind: base, bound: {type: two_sided, tol: 1.5}, units: dBFS}
+  kurtosis_i:              {kind: abs, bound: {type: range, lo: 2.8, hi: 3.2}, units: ""}
+  kurtosis_q:              {kind: abs, bound: {type: range, lo: 2.8, hi: 3.2}, units: ""}
+  impulse_fraction_6sigma: {kind: base, bound: {type: ratio_upper, factor: 3, floor: 1.0e-6}, units: fraction}
+  new_narrowband_lines:    {kind: abs, bound: {type: equals, value: 0}, units: count}
+  # Plan name: narrowband_line_level_change_db. Recorded as the strongest line's level
+  # above the median PSD, judged against its baseline.
+  narrowband_max_line_db:  {kind: base, bound: {type: upper, tol: 6.0}, units: dB}
+  tx_isolation_margin_db:  {kind: abs, bound: {type: max, value: 3.0}, units: dB}
+  noise_at_nmax_dbfs:      {kind: base, bound: {type: upper, tol: 3.0}, units: dBFS}
+
+t05:
+  slope_db_per_decade:              {kind: abs, bound: {type: range, lo: -11.0, hi: -9.0}, units: dB/decade}
+  deviation_from_theory_at_nmax_db: {kind: abs, bound: {type: max, value: 3.0}, units: dB}
+  plateau_level_dbfs:               {kind: base, bound: {type: two_sided, tol: 3.0}, units: dBFS}
+  plateau_onset_n:                  {kind: base, bound: {type: factor_two_sided, factor: 3}, units: pulses}
+  dither_gain_at_nmax_db:           {kind: base, bound: {type: lower, tol: 3.0}, units: dB}
+  signal_peak_loss_at_nmax_db:      {kind: abs, bound: {type: max, value: 0.2}, units: dB}
+
+session:
+  fast_tier_duration_s: {kind: abs, bound: {type: max, value: 600}, units: s}
