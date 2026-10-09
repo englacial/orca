@@ -40,7 +40,10 @@ def plot_table(reduced, run_id, status, path):
     fig, axes = plotting.summary_figure("t09", "duty cycle sweep", run_id, status)
     ax = axes[0, 0]
     ax.axis("off")
-    rows = [[f"{d * 100:.0f}", f"{p * 1e6:.1f}", f"{int(e)}", f"{int(a)}", f"{r * 100:.3f}", f"{int(o)}"]
+    def n(x):
+        return "-" if x is None or not np.isfinite(x) else f"{int(x)}"
+
+    rows = [[f"{d * 100:.0f}", f"{p * 1e6:.1f}", n(e), n(a), f"{r * 100:.3f}", n(o)]
             for d, p, e, a, r, o in zip(reduced["duty"].values, reduced["pri"].values, reduced["errors"].values,
                                         reduced["attempted"].values, reduced["error_rate"].values,
                                         reduced["other_errors"].values)]
@@ -68,12 +71,15 @@ def test_t09_duty_cycle(hil, tier, fixture_cfg, capture_manager, recorder):
             killed = cap.result.killed
         except RadarTimeout:
             cap = capture_manager._owned["t09"][-1]
+            capture_manager.archive(cap)
             log = (cap.case_dir / "uhd_stdout.log").read_text()
             killed = True
         caps.append(cap)
         throttled |= bool((telemetry.throttled() or 0) & 0xF)
         points.append({"duty": duty, "log": log, "config": testkit.case_configs([cap])[cap.case],
                        "killed": killed})
+        if killed:   # higher duty cycles only get worse
+            break
     reduced, ms = analyze_duty(points, {"report_at": p["report_at"], "full": tier == "full"})
     recorder.record_all(ms)
     recorder.record("throttled_during_sweep", throttled)

@@ -75,6 +75,10 @@ t02:  # per window (case)
   pslr_minus_ideal_db:     {kind: abs, bound: {type: range, lo: -3.0, hi: 3.0}, units: dB}
   mainlobe_width_ratio:    {kind: abs, bound: {type: range, lo: 0.9, hi: 1.1}, units: ratio}
   islr_minus_ideal_db:     {kind: base, bound: {type: upper, tol: 1.5}, units: dB}
+  # Windows with ideal PSLR below -50 dB (blackman, kaiser): measured PSLR bottoms out at
+  # the system sidelobe floor (~-56 dB here), so absolute values are judged on baseline.
+  floor_limited_pslr_db:   {kind: base, bound: {type: two_sided, tol: 2.0}, units: dB}
+  floor_limited_islr_db:   {kind: base, bound: {type: upper, tol: 2.0}, units: dB}
   # PSLR/ISLR exclude +/-2 samples at 1-3 cable round trips after the peak (reflections)
   # and one round trip before it (internal-leakage model residual).
   # Plan metric sidelobe_extent_samples (vs chirp length): measured where the response
@@ -161,12 +165,14 @@ t10:
   records_times_presums_equals_requested:  {kind: abs, bound: {type: equals, value: true}, units: bool}
   error_file_type_is_not_included:         {kind: abs, bound: {type: equals, value: true}, units: bool}
   time_offset_increases_logged:            {kind: abs, bound: {type: equals, value: true}, units: bool}
-  max_gap_phase_jump_sigma:                {kind: abs, bound: {type: max, value: 3.0}, units: sigma}
+  # Plan: max 3 sigma. With hundreds to thousands of gaps, Gaussian jumps exceed 3 sigma
+  # by chance; the limit is the 0.1% false-alarm level for the gap count (>= 3 sigma).
+  max_gap_phase_jump_sigma:                {kind: abs, bound: {type: max, value: limit}, units: sigma}
   stacked_power_change_after_errors_db:    {kind: abs, bound: {type: max, value: 0.2}, units: dB}
   record_power_drop_after_first_error_db:  {kind: abs, bound: {type: max, value: 0.5}, units: dB}
   probe_duty:                              {kind: info, units: fraction}
 
-t11:  # powers are normalized by each capture's internal-leakage peak
+t11:  # peak compared as peak-to-noise ratio (capture gain varies), noise in dBFS
   peak_power_diff_db:            {kind: abs, bound: {type: max, value: 0.2}, units: dB}
   noise_power_diff_db:           {kind: abs, bound: {type: max, value: 0.5}, units: dB}
   p100_noise_vs_p1_single_db:    {kind: abs, bound: {type: range, lo: -21.0, hi: -19.0}, units: dB}

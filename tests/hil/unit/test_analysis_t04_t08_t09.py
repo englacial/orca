@@ -96,3 +96,12 @@ def test_t09_duty_points_from_logs(radar_cfg, make_capture):
     assert m[("max_duty_with_error_rate_below_2pct", None)].value == 0.5
     assert m[("process_killed", None)].value is False
     assert reduced["pri"].values[0] == pytest.approx(200e-6)
+
+
+def test_t09_killed_point_without_summary(radar_cfg):
+    from tests.hil.orca_hil.analysis.duty import analyze_duty
+    cfg = {**radar_cfg, "CHIRP": {**radar_cfg["CHIRP"], "num_pulses": 1000}}
+    reduced, ms = analyze_duty([{"duty": 1.0, "log": "", "config": cfg, "killed": True}])
+    m = {(x.name, x.case): x for x in ms}
+    assert m[("process_killed", None)].value is True
+    assert np.isnan(reduced["attempted"].values[0])

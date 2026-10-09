@@ -27,10 +27,11 @@ def point_stats(log_text, cfg, killed=False):
     m = re.search(r"\[RX\] Total pulses written: (\d+)", log_text)
     written = int(m.group(1)) if m else None
     requested = int(cfg["CHIRP"]["num_pulses"])
-    return {"errors": len(errors), "attempted": attempted,
+    return {"errors": len(errors),
             "late_command": codes.get("ERROR_CODE_LATE_COMMAND", 0),
             "other_errors": sum(v for k, v in codes.items() if k != "ERROR_CODE_LATE_COMMAND"),
             "error_rate": len(errors) / attempted if attempted else np.nan,
+            "attempted": attempted if attempted is not None else np.nan,
             "written_ok": written == requested, "killed": bool(killed)}
 
 

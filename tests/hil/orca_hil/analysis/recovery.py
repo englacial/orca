@@ -1,5 +1,6 @@
 """T10 error recovery and phase continuity (Sec. III-A, VIII-A)."""
 import numpy as np
+import scipy.stats
 import xarray as xr
 
 import processing_dask as pdk
@@ -11,6 +12,15 @@ from .timing import time_offset_increases
 
 WINDOW_RECORDS = 100
 MIN_WINDOW_RECORDS = 10
+FALSE_ALARM = 1e-3      # chance that healthy (Gaussian) gap jumps exceed the limit
+MIN_JUMP_LIMIT_SIGMA = 3.0
+
+
+def jump_limit_sigma(n_gaps):
+    """Max-|jump| limit for n Gaussian gap jumps at FALSE_ALARM (at least 3 sigma)."""
+    if n_gaps < 1:
+        return MIN_JUMP_LIMIT_SIGMA
+    return max(MIN_JUMP_LIMIT_SIGMA, float(scipy.stats.norm.isf(FALSE_ALARM / (2 * n_gaps))))
 
 
 def wrap(phi):
@@ -88,8 +98,10 @@ def analyze_recovery(capture, fixture, params=None):
 
     jumps, normal, gap_d = gap_phase_jumps(phase, gaps)
     no_gaps = jumps.size == 0
+    limit = jump_limit_sigma(jumps.size)
     ms.append(Measurement("max_gap_phase_jump_sigma", float(jumps.max()) if jumps.size else np.nan,
-                          inconclusive=no_gaps, note=f"{jumps.size} gaps evaluated"))
+                          params={"limit": limit}, inconclusive=no_gaps,
+                          note=f"{jumps.size} gaps evaluated; limit {limit:.2f} sigma"))
 
     if gaps:
         # Reference gap: the first one with a full window of clean records before it

@@ -2,7 +2,7 @@ import numpy as np
 import pytest
 
 from tests.hil.orca_hil.analysis.presum import analyze_presum
-from tests.hil.orca_hil.analysis.recovery import analyze_recovery, error_records
+from tests.hil.orca_hil.analysis.recovery import analyze_recovery, error_records, jump_limit_sigma
 from tests.hil.orca_hil.configs import deep_merge
 
 SIG = {"leakage": {"delay": 159.0, "amp": 2e-3}, "loopback": {"delay": 173.25, "amp": 1e-2}}
@@ -23,6 +23,12 @@ def test_error_records():
     assert error_records([5000, 5001, 5002], 10) == [(500, False)]
     assert error_records([12005], 10) == [(1200, True)]
     assert error_records([], 10) == []
+
+
+def test_jump_limit_sigma():
+    assert jump_limit_sigma(0) == 3.0
+    assert jump_limit_sigma(10) == pytest.approx(3.89, abs=0.01)
+    assert jump_limit_sigma(6479) == pytest.approx(5.25, abs=0.01)
 
 
 def test_t10_continuous_through_errors(t10_cfg, fixture_cfg, make_capture):

@@ -41,8 +41,12 @@ def test_t02_noiseless_matches_ideal(radar_cfg, fixture_cfg, make_capture, windo
                         leakage={"delay": 159.0, "amp": 1e-3}, loopback={"delay": 173.25, "amp": 1e-2})
     reduced, ms = analyze_sidelobes({window: z}, fixture_cfg)
     m = by_name(ms)
-    assert m[("pslr_minus_ideal_db", window)].value == pytest.approx(0.0, abs=0.1)
-    assert m[("islr_minus_ideal_db", window)].value == pytest.approx(0.0, abs=0.1)
+    if window == "kaiser10":   # ideal PSLR below the system floor: absolute values
+        assert ("pslr_minus_ideal_db", window) not in m
+        assert m[("floor_limited_pslr_db", window)].value < -50
+    else:
+        assert m[("pslr_minus_ideal_db", window)].value == pytest.approx(0.0, abs=0.1)
+        assert m[("islr_minus_ideal_db", window)].value == pytest.approx(0.0, abs=0.1)
     assert m[("mainlobe_width_ratio", window)].value == pytest.approx(1.0, abs=0.01)
     assert m[("sidelobe_extent_minus_ideal_samples", window)].value == pytest.approx(0.0, abs=1.0)
     assert m[("first_echo_db", window)].value < -60

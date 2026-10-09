@@ -12,6 +12,10 @@ FLOOR_MARGIN_DB = 15.0      # extent threshold above the stacked noise floor (no
 # -1 is the subtracted internal-leakage peak (model residual), +1..+3 are reflections
 EXCLUDE_ORDERS = (-1, 1, 2, 3)
 ECHO_HALF_WIDTH = 2.0
+# Windows whose ideal PSLR is below this are limited by the system's own sidelobe
+# floor (about -56 dB on the commissioning fixture): their absolute PSLR/ISLR are
+# judged against the baseline instead of the ideal.
+IDEAL_PSLR_FLOOR_DB = -50.0
 
 
 def window_metrics(capture, fixture):
@@ -61,10 +65,15 @@ def analyze_sidelobes(captures, fixture, params=None):
     ms, rows = [], {}
     for window, cap in captures.items():
         meas, ideal, lc, curves, echo_db = window_metrics(cap, fixture)
+        if ideal.pslr_db >= IDEAL_PSLR_FLOOR_DB:
+            ms += [Measurement("pslr_minus_ideal_db", meas.pslr_db - ideal.pslr_db, case=window),
+                   Measurement("islr_minus_ideal_db", meas.islr_db - ideal.islr_db, case=window)]
+        else:
+            note = f"ideal {ideal.pslr_db:.0f} dB is below the system sidelobe floor"
+            ms += [Measurement("floor_limited_pslr_db", meas.pslr_db, case=window, note=note),
+                   Measurement("floor_limited_islr_db", meas.islr_db, case=window, note=note)]
         ms += [
-            Measurement("pslr_minus_ideal_db", meas.pslr_db - ideal.pslr_db, case=window),
             Measurement("mainlobe_width_ratio", meas.width_3db / ideal.width_3db, case=window),
-            Measurement("islr_minus_ideal_db", meas.islr_db - ideal.islr_db, case=window),
             Measurement("sidelobe_extent_minus_ideal_samples",
                         meas.extent - ideal.extent if meas.extent is not None else float("nan"), case=window,
                         inconclusive=meas.extent is None,
