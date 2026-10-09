@@ -71,3 +71,12 @@ def test_prune_runs(tmp_path):
     os.utime(old, (now - 90 * 86400, now - 90 * 86400))
     assert scratch.prune_runs(tmp_path / "runs", 60, now=now) == [old]
     assert new.exists()
+
+
+def test_release_keeps_logs_of_run_without_output(tmp_path):
+    case = tmp_path / "scratch" / "t05" / "lo_offset"
+    case.mkdir(parents=True)
+    for name in ("config.yaml", "uhd_stdout.log", "uhd_stderr.log", "chirp.bin"):
+        (case / name).write_text("x")
+    kept = scratch.release_case(case, False, tmp_path / "kept", "run", "t05")
+    assert sorted(p.name for p in kept.iterdir()) == ["config.yaml", "uhd_stderr.log", "uhd_stdout.log"]

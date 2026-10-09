@@ -8,7 +8,7 @@ from ..metrics import Measurement
 from .common import db10, noise_window_start, open_capture, reference_chirp, stacked_profile
 from .profile import locate_peaks, single_pulse_stats
 
-CORR_HALF_WIDTH = 100
+CORR_WINDOW = (-5, 100)   # samples around the loopback peak; excludes the internal-leakage peak
 
 
 def record_powers(ds, chirp, t2, nstart):
@@ -40,7 +40,9 @@ def analyze_presum(captures, fixture, params=None):
     prof1 = np.abs(stacked_profile(d1, chirp))
     profp = np.abs(stacked_profile(dp, chirp))
     c = int(round(fit.t2))
-    win = slice(max(c - CORR_HALF_WIDTH, 0), c + CORR_HALF_WIDTH + 1)
+    # The internal-leakage peak (one round trip before) varies by a few dB between
+    # captures, so it is left out of the shape comparison.
+    win = slice(max(c + CORR_WINDOW[0], 0), c + CORR_WINDOW[1] + 1)
     corr = float(np.corrcoef(prof1[win], profp[win])[0, 1])
 
     ms = [

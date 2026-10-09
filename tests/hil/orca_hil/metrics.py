@@ -54,7 +54,7 @@ class MetricRecorder:
             status = ev.status
             if inconclusive and status != "info":
                 status = "inconclusive"
-            if check.kind == "base" and self.ignore_base:
+            if check.kind == "base" and self.ignore_base and status != "inconclusive":
                 status = "info"
             rec = {"name": name}
             if case is not None:

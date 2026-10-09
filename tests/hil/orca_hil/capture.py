@@ -61,9 +61,11 @@ class CaptureManager:
         if shared_key and shared_key in self._shared:
             return self._shared[shared_key]
         cap = self.new_case(test_id, case, overrides)
-        cap.result = self.runner.run(cap.config_rel, stop_after_s=stop_after_s, timeout_s=timeout_s,
-                                     convert=convert)
-        self.archive(cap)
+        try:
+            cap.result = self.runner.run(cap.config_rel, stop_after_s=stop_after_s, timeout_s=timeout_s,
+                                         convert=convert)
+        finally:
+            self.archive(cap)
         if shared_key:
             self._owned[test_id].remove(cap)
             cap.shared = True
@@ -79,8 +81,9 @@ class CaptureManager:
         else:
             src_cfg, src_log = cap.case_dir / "config.yaml", cap.case_dir / "uhd_stdout.log"
         for src, dest in ((src_cfg, tdir / "configs" / f"{cap.case}_config.yaml"),
-                          (src_log, tdir / "logs" / f"{cap.case}_uhd_stdout.log")):
-            if src.exists():
+                          (src_log, tdir / "logs" / f"{cap.case}_uhd_stdout.log"),
+                          (cap.case_dir / "uhd_stderr.log", tdir / "logs" / f"{cap.case}_uhd_stderr.log")):
+            if src.exists() and src.stat().st_size:
                 dest.parent.mkdir(parents=True, exist_ok=True)
                 shutil.copy(src, dest)
 

@@ -71,7 +71,6 @@ def test_t09_duty_cycle(hil, tier, fixture_cfg, capture_manager, recorder):
             killed = cap.result.killed
         except RadarTimeout:
             cap = capture_manager._owned["t09"][-1]
-            capture_manager.archive(cap)
             log = (cap.case_dir / "uhd_stdout.log").read_text()
             killed = True
         caps.append(cap)

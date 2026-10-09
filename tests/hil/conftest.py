@@ -3,6 +3,7 @@
 Hardware tests are marked ``hardware`` and only run with ``--hil``. Without it
 they are skipped, so hosted CI never touches hardware. See README.md.
 """
+import os
 import shutil
 import sys
 import time
@@ -12,7 +13,7 @@ from types import SimpleNamespace
 
 import pytest
 
-from tests.hil.orca_hil import HIL_DIR, REPO_ROOT, scratch, telemetry, yamlio
+from tests.hil.orca_hil import HIL_DIR, REPO_ROOT, baseline_update, scratch, telemetry, yamlio
 from tests.hil.orca_hil.baselines import Baselines
 from tests.hil.orca_hil.metrics import MetricRecorder
 from tests.hil.orca_hil.thresholds import evaluate, load_thresholds
@@ -26,7 +27,8 @@ def pytest_addoption(parser):
     g.addoption("--hil", action="store_true", help="enable hardware tests")
     g.addoption("--tier", choices=("fast", "full"), default="fast", help="test tier (default fast)")
     g.addoption("--fixture", default=None, help="fixture id (default: the only file in fixtures/)")
-    g.addoption("--update-baseline", action="store_true", help="re-measure baselines (Phase 5)")
+    g.addoption("--update-baseline", action="store_true",
+                help="repeat the run --baseline-repeats times and rewrite the [base] baselines")
     g.addoption("--baseline-repeats", type=int, default=3)
     g.addoption("--replay", action="store_true", help="enable replay tests (needs golden data)")
     g.addoption("--publish", action="store_true", help="push results to the results repo")
@@ -43,6 +45,14 @@ def _fixture_path(fixture_id):
     return files[0]
 
 
+def pytest_cmdline_main(config):
+    """--update-baseline: run the session --baseline-repeats times, then aggregate."""
+    if (config.getoption("--update-baseline") and config.getoption("--hil")
+            and not os.environ.get(baseline_update.CHILD_ENV)):
+        return baseline_update.main_from_pytest(config)
+    return None
+
+
 @pytest.hookimpl(tryfirst=True)
 def pytest_configure(config):
     config.addinivalue_line("markers", "hardware: needs the HIL fixture (run with --hil)")
@@ -52,7 +62,7 @@ def pytest_configure(config):
     for tid in TEST_IDS:
         config.addinivalue_line("markers", f"{tid}: HIL test {tid.upper()}")
 
-    for opt, phase in (("--update-baseline", 5), ("--publish", 6), ("--replay", 7)):
+    for opt, phase in (("--publish", 6), ("--replay", 7)):
         if config.getoption(opt):
             raise pytest.UsageError(f"{opt} is not implemented yet (HIL plan Phase {phase})")
 
@@ -66,6 +76,8 @@ def pytest_configure(config):
     tier = config.getoption("--tier")
     git = telemetry.git_info()
     started = datetime.now(timezone.utc)
+    if config.getoption("--update-baseline") and git["dirty"]:
+        raise pytest.UsageError("--update-baseline refuses to run on a dirty git tree")
     run_id = f"{started:%Y%m%dT%H%M%SZ}_{(git['sha'] or 'nogit')[:7]}{'-dirty' if git['dirty'] else ''}_{tier}"
 
     retention = (fixture.get("storage") or {}).get("run_retention_days")

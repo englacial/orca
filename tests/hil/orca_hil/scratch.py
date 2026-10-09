@@ -57,8 +57,9 @@ def release_case(case_path, passed, kept_root, run_id, test_id, keep_raw=False):
     """Clean up one capture directory after analysis.
 
     On pass (and without keep_raw): delete everything. Otherwise move the raw
-    prefix files to <kept_root>/<run_id>/<test_id>/<case>/ and delete the rest
-    (the .zarr can be regenerated from the raw files).
+    prefix files (and the case logs, if the run never got that far) to
+    <kept_root>/<run_id>/<test_id>/<case>/ and delete the rest (the .zarr can be
+    regenerated from the raw files).
     Returns the kept directory, or None.
     """
     case_path = Path(case_path)
@@ -66,8 +67,13 @@ def release_case(case_path, passed, kept_root, run_id, test_id, keep_raw=False):
     if not passed or keep_raw:
         kept = Path(kept_root) / run_id / test_id / case_path.name
         kept.mkdir(parents=True, exist_ok=True)
-        for f in raw_files(case_path):
+        raw = raw_files(case_path)
+        for f in raw:
             shutil.move(str(f), kept / f.name)
+        if not raw:   # the radar run never reached save_data (hang, crash): keep its logs
+            for name in ("config.yaml", "uhd_stdout.log", "uhd_stderr.log"):
+                if (case_path / name).exists():
+                    shutil.move(str(case_path / name), kept / name)
     shutil.rmtree(case_path, ignore_errors=True)
     return kept
 
