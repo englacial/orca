@@ -56,14 +56,19 @@ def _finite(v):
     return isinstance(v, (int, float)) and not isinstance(v, bool) and math.isfinite(v)
 
 
-def collect_base_values(run_dirs):
-    """{test_id: {(name, case): [(value, run_id)]}} for judgeable [base] records."""
+def collect_base_values(run_dirs, include_inconclusive=False):
+    """{test_id: {(name, case): [(value, run_id)]}} for judgeable [base] records.
+
+    include_inconclusive: also take finite values marked inconclusive (runs made
+    without --update-baseline, where every [base] metric lacking a baseline is).
+    """
     out = {}
     for rd in run_dirs:
         for mpath in sorted(Path(rd).glob("t*/metrics.yaml")):
             tid = mpath.parent.name
             for r in yamlio.load(mpath).get("metrics", []):
-                if r["kind"] != "base" or r["status"] == "inconclusive" or not _finite(r["value"]):
+                if (r["kind"] != "base" or not _finite(r["value"])
+                        or (r["status"] == "inconclusive" and not include_inconclusive)):
                     continue
                 out.setdefault(tid, {}).setdefault((r["name"], r.get("case")), []).append((r["value"], rd.name))
     return out
@@ -89,10 +94,10 @@ def _reduced_attr(run_dir, tid, key):
     return read_reduced(p).attrs.get(key) if p.exists() else None
 
 
-def update_baselines(fixture_id, tier, run_dirs, git_sha, directory=None):
+def update_baselines(fixture_id, tier, run_dirs, git_sha, directory=None, include_inconclusive=False):
     """Write mean/std/n of every [base] metric, the T3/T4 line lists and reference zarrs."""
     b = Baselines(fixture_id, tier) if directory is None else Baselines(fixture_id, tier, directory)
-    values = collect_base_values(run_dirs)
+    values = collect_base_values(run_dirs, include_inconclusive)
     for tid, metrics in values.items():
         for (name, case), vals in sorted(metrics.items(), key=lambda kv: (kv[0][0], kv[0][1] or "")):
             b.update_scalar(tid, name, [v for v, _ in vals], [r for _, r in vals], case=case)
@@ -134,3 +139,23 @@ def main_from_pytest(config):
     for rd, c in zip(run_dirs, codes):
         print(f"  {rd.name}: exit {c}")
     return max(codes)
+
+
+def main(argv=None):
+    """Re-aggregate baselines from existing run directories (same fixture and tier)."""
+    import argparse
+    ap = argparse.ArgumentParser(description=main.__doc__)
+    ap.add_argument("run_dirs", nargs="+", type=Path)
+    ap.add_argument("--include-inconclusive", action="store_true",
+                    help="use finite [base] values marked inconclusive (runs without --update-baseline)")
+    a = ap.parse_args(argv)
+    runs = [yamlio.load(rd / "run.yaml") for rd in a.run_dirs]
+    if len({(r["fixture_id"], r["tier"]) for r in runs}) != 1:
+        ap.error("run directories must share fixture and tier")
+    b, values = update_baselines(runs[-1]["fixture_id"], runs[-1]["tier"], a.run_dirs, runs[-1]["git_sha"],
+                                 include_inconclusive=a.include_inconclusive)
+    print(f"{sum(len(v) for v in values.values())} [base] metrics from {len(a.run_dirs)} runs -> {b.path}")
+
+
+if __name__ == "__main__":
+    main()

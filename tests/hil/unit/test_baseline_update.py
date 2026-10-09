@@ -36,6 +36,7 @@ def test_collect_and_update(tmp_path):
             for i, v in enumerate((-52.0, -52.2, -51.8))]
     runs.append(_run(tmp_path, "r3", [m(math.nan), m(-60.0, status="inconclusive")]))
     vals = collect_base_values(runs)
+    assert len(collect_base_values(runs, include_inconclusive=True)["t01"][("loopback_peak_power_dbfs", None)]) == 4
     assert sorted(v for v, _ in vals["t01"][("loopback_peak_power_dbfs", None)]) == [-52.2, -52.0, -51.8]
     b, _ = update_baselines("fx", "full", runs, "abc", directory=tmp_path / "baselines")
     got = b.get("t01", "loopback_peak_power_dbfs")

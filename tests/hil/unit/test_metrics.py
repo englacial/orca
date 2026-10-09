@@ -99,3 +99,10 @@ def test_ignore_base_mode(thresholds, baselines):
     rec.record("clip", 0.9)
     statuses = {r["name"]: r["status"] for r in rec.records}
     assert statuses == {"power_db": "info", "clip": "fail"}
+
+
+def test_ignore_base_mode_without_baseline(thresholds, tmp_path):
+    rec = MetricRecorder("t99", thresholds, Baselines("none", directory=tmp_path), ignore_base=True)
+    rec.record("power_db", -50.0)
+    rec.record("power_db", float("nan"), case="x", inconclusive=True)
+    assert [r["status"] for r in rec.records] == ["info", "inconclusive"]
