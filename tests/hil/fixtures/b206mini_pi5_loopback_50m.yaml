@@ -26,13 +26,13 @@ safety:
   tx_gain_max: 75
   rx_clip_fraction_max: 0.9
   attenuator_check:
-    tx_gain: null                # set at commissioning
-    expected_peak_dbfs: null     # set at commissioning
+    tx_gain: 15.0                # set at commissioning
+    expected_peak_dbfs: -72.1    # set at commissioning
     tolerance_db: 6
 rf_base:
   freq: 330.0e6
-  tx_gain: null                  # set at commissioning
-  rx_gain: null                  # set at commissioning
+  tx_gain: 35.0                  # set at commissioning
+  rx_gain: 40.0                  # set at commissioning
 calibration:
   tx_power_table: null
   path_loss_db: null
