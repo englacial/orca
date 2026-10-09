@@ -45,7 +45,8 @@ def summary_figure(test_id, figure_ref, run_id, status, nrows=1, ncols=1, **kwar
 
 
 def plot_current(ax, x, y, label="this run", **kwargs):
-    return ax.plot(x, y, color=ACCENT, lw=1.2, label=label, **kwargs)
+    kwargs.setdefault("lw", 1.2)
+    return ax.plot(x, y, color=ACCENT, label=label, **kwargs)
 
 
 def plot_baseline(ax, x, y, label="baseline", **kwargs):

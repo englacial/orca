@@ -15,7 +15,8 @@ OVERRIDES = {"CHIRP": {"rx_duration": 100e-6, "num_presums": 100}}   # config/or
 PARAMS = {
     "fast": {"duties": [0.5, 0.75, 0.9], "n_pulses": 50000,
              "report_at": {0.5: "error_rate_at_50pct", 0.75: "error_rate_at_75pct"}},
-    "full": {"duties": [round(d, 2) for d in np.arange(0.2, 1.0 + 1e-9, 0.05)], "n_pulses": 1000000,
+    # Plan: 1e6 pulses per point; 5e5 keeps the sweep near its ~35 min estimate (1e6 takes ~1 h)
+    "full": {"duties": [round(d, 2) for d in np.arange(0.2, 1.0 + 1e-9, 0.05)], "n_pulses": 500000,
              "report_at": {0.5: "error_rate_at_50pct"}},
 }
 

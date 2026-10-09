@@ -124,6 +124,21 @@ t05:
   dc_chirp_slope_db_per_decade:              {kind: base, bound: {type: two_sided, tol: 1.0}, units: dB/decade}
   dc_chirp_deviation_from_theory_at_nmax_db: {kind: base, bound: {type: upper, tol: 2.0}, units: dB}
 
+# T6/T7: record times come from the schedule reconstructed from the stdout log, so
+# captures with late-command errors are analyzed (the plan marks them inconclusive);
+# a few PRIs of timing error are negligible at these integration times and drift rates.
+t06:  # power_loss_db per integration time (case), relative to single pulses
+  errors_in_captures: {kind: info, units: count}
+  power_loss_db:      {kind: abs, bound: {type: max, value: 0.2}, units: dB}
+  spread_1sigma_db:   {kind: base, bound: {type: ratio_upper, factor: 1.5}, units: dB}
+
+t07:
+  errors_in_captures:        {kind: info, units: count}
+  phase_drift_mdeg_per_s:    {kind: abs, bound: {type: abs_max, value: 0.5}, units: mdeg/s}
+  phase_var_to_theory_ratio: {kind: abs, bound: {type: range, lo: 0.7, hi: 1.5}, units: ratio}
+  phase_steps_count:         {kind: abs, bound: {type: equals, value: 0}, units: count}
+  residual_std_deg:          {kind: base, bound: {type: ratio_upper, factor: 1.5}, units: deg}
+
 t08:
   tx_sweep_slope_db_per_db: {kind: abs, bound: {type: range, lo: 0.95, hi: 1.05}, units: dB/dB}
   rx_sweep_slope_db_per_db: {kind: abs, bound: {type: range, lo: 0.95, hi: 1.05}, units: dB/dB}
@@ -157,6 +172,12 @@ t11:  # powers are normalized by each capture's internal-leakage peak
   p100_noise_vs_p1_single_db:    {kind: abs, bound: {type: range, lo: -21.0, hi: -19.0}, units: dB}
   profile_magnitude_correlation: {kind: abs, bound: {type: min, value: 0.999}, units: ""}
   capture_gain_diff_db:          {kind: info, units: dB}
+
+t12:  # per frequency (case)
+  loopback_power_dbfs:    {kind: base, bound: {type: two_sided, tol: 1.5}, units: dBFS}
+  loopback_to_leakage_db: {kind: base, bound: {type: two_sided, tol: 1.5}, units: dB}
+  noise_floor_dbfs:       {kind: info, units: dBFS}
+  ripple_db:              {kind: base, bound: {type: upper, tol: 1.0}, units: dB}
 
 session:
   fast_tier_duration_s: {kind: abs, bound: {type: max, value: 600}, units: s}

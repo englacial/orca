@@ -236,6 +236,7 @@ def recorder(request, hil, thresholds, baselines):
     rec = MetricRecorder(tid, thresholds, baselines, out_dir=out_dir, fixture_suspect=suspect,
                          ignore_base=request.config.getoption("--update-baseline"))
     sampler = telemetry.TelemetrySampler(out_dir / "telemetry.csv").start()
+    rec.telemetry = sampler
 
     def add_telemetry(r):
         s = sampler.stop()
