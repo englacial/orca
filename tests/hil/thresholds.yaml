@@ -84,7 +84,9 @@ t02:  # per window (case)
   # Plan metric sidelobe_extent_samples (vs chirp length): measured where the response
   # exceeds the stacked noise floor + 15 dB, and compared with the ideal response at the
   # same floor, since a tapered window's sidelobes drop below any floor before chirp length.
-  sidelobe_extent_minus_ideal_samples: {kind: abs, bound: {type: range, lo: -10, hi: 10}, units: samples}
+  # One-sided: a shorter extent only means the far sidelobes fell below the floor (rectangular
+  # window sidelobes near the chirp length sit close to it).
+  sidelobe_extent_minus_ideal_samples: {kind: abs, bound: {type: max, value: 10}, units: samples}
   first_echo_db:           {kind: info, units: dB}
 
 t03:
