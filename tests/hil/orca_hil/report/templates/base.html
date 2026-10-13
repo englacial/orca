@@ -1,0 +1,21 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>{% block title %}ORCA HIL Results{% endblock %}</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Archivo+Narrow:wght@500;600&family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans:wght@400;500&display=swap">
+<link rel="stylesheet" href="{{ root }}style.css">
+</head>
+<body>
+<div class="page">
+<header class="topbar">
+  <a class="brand" href="{{ root }}index.html">ORCA HIL results</a>
+  <nav>{% for tid in test_ids %}<a href="{{ root }}tests/{{ tid }}.html">{{ tid.upper() }}</a>{% endfor %}</nav>
+</header>
+{% block content %}{% endblock %}
+<footer>Generated {{ generated }} from the results repository. Hardware-in-the-loop tests for <a href="https://github.com/englacial/orca">englacial/orca</a>.</footer>
+</div>
+</body>
+</html>

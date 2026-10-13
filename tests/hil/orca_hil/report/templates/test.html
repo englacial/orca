@@ -1,0 +1,22 @@
+{% extends "base.html" %}
+{% from "macros.html" import pill %}
+{% block title %}{{ tid.upper() }} {{ test_names.get(tid, "") }} · ORCA HIL{% endblock %}
+{% block content %}
+<p class="eyebrow">{{ tid.upper() }}</p>
+<h1>{{ test_names.get(tid, tid) }}</h1>
+<p class="muted">{{ runs | length }} runs. Points are colored by status; hollow points come from a dirty tree. The shaded band is the bound in force at each run, grey dashes mark baseline updates and blue dots mark UHD changes.</p>
+{% for t in tiers %}
+<h2>{{ t.tier | capitalize }} tier trends</h2>
+<div class="plots">
+{% for p in t.plots %}<figure><img src="{{ p.src }}" alt="Trend of {{ p.title }}" loading="lazy"></figure>{% endfor %}
+</div>
+{% else %}<p class="muted">No numeric metrics recorded yet.</p>{% endfor %}
+
+<h2>Summary plots</h2>
+{% if gallery %}
+<div class="plots">
+{% for g in gallery %}<figure><a href="../runs/{{ g.run.run_id }}.html#{{ tid }}"><img src="{{ g.plot }}" alt="{{ tid.upper() }} summary for {{ g.run.run_id }}" loading="lazy"></a>
+<figcaption><span class="mono">{{ g.run.run_id }}</span> {{ pill(g.run.tests.get(tid)) }}</figcaption></figure>{% endfor %}
+</div>
+{% else %}<p class="muted">No summary plots published. Fast-tier plots are published only for failed tests.</p>{% endif %}
+{% endblock %}

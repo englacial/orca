@@ -12,6 +12,7 @@ hardware:
 host:
   model: Raspberry Pi 5
   data_root: /mnt/nvme/orca-hil
+  results_repo: ~/orca-hil-testing-results   # clone of englacial/orca-hil-testing-results
 uhd:
   source_dir: ~/uhd
   install_prefix: ~/uhd-patched

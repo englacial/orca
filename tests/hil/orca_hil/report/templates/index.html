@@ -1,0 +1,46 @@
+{% extends "base.html" %}
+{% from "macros.html" import pill, sha with context %}
+{% block content %}
+<p class="eyebrow">B206mini-i · Raspberry Pi 5 · 50 m loopback</p>
+<h1>ORCA HIL results</h1>
+<p class="muted">{{ n_runs }} published runs. Each run checks the radar end to end on real hardware against physics bounds and this fixture's baseline.</p>
+
+<h2>Latest runs</h2>
+<div class="latest">
+{% for tier in ["fast", "full"] %}{% set r = latest[tier] %}
+  <div>
+    <div class="testhead"><span class="tier">{{ tier }} tier</span>{% if r %}{{ pill(r.status) }}{% endif %}</div>
+    {% if r %}
+    <dl>
+      <dt>Run</dt><dd><a class="mono" href="runs/{{ r.run_id }}.html">{{ r.run_id }}</a></dd>
+      <dt>Started</dt><dd>{{ r.started_utc }}</dd>
+      <dt>ORCA</dt><dd>{{ sha(r) }} <span class="muted">{{ r.git_branch }}</span></dd>
+      <dt>UHD</dt><dd class="mono">{{ (r.uhd.commit or "")[:7] }}</dd>
+      <dt>Failed</dt><dd>{% set failed = r.tests | dictsort | selectattr(1, "equalto", "fail") | map(attribute=0) | list %}{{ failed | join(", ") | upper if failed else "none" }}</dd>
+    </dl>
+    {% else %}<p class="muted">No {{ tier }}-tier runs published yet.</p>{% endif %}
+  </div>
+{% endfor %}
+</div>
+
+<h2>Test status, last {{ grid_runs | length }} runs</h2>
+<div class="scroll">
+<table class="grid">
+  <thead><tr><th></th>{% for r in grid_runs %}<th class="{{ 'dirty' if r.dirty }}" title="{{ r.run_id }}">{{ r.started.strftime("%m-%d %H:%M") }}{{ " full" if r.tier == "full" }}</th>{% endfor %}</tr></thead>
+  <tbody>
+  {% for tid in test_ids %}
+  <tr><th class="test"><a href="tests/{{ tid }}.html">{{ tid.upper() }}</a> <span class="muted">{{ test_names.get(tid, "") }}</span></th>
+    {% for r in grid_runs %}{% set s = r.tests.get(tid) %}
+    <td class="{{ 'dirty' if r.dirty }}">{% if s %}<a class="c-{{ 'suspect' if (s == 'fail' and r.test_docs.get(tid, {}).get('fixture_suspect')) else s }}" href="runs/{{ r.run_id }}.html#{{ tid }}" title="{{ tid.upper() }} {{ s }} · {{ r.run_id }}"></a>{% else %}<span class="c-none" title="not run"></span>{% endif %}</td>
+    {% endfor %}
+  </tr>
+  {% endfor %}
+  </tbody>
+</table>
+</div>
+<div class="legend">
+  <span style="--sw: var(--pass)">pass</span><span style="--sw: var(--fail)">fail</span>
+  <span style="--sw: var(--inconclusive)">inconclusive</span><span style="--sw: var(--suspect)">fixture suspect</span>
+  <span style="--sw: var(--info)">skipped</span><span class="text">Columns are runs, newest first, labelled with the start time (UTC) and "full" for full-tier runs. Faded columns ran from a dirty tree.</span>
+</div>
+{% endblock %}

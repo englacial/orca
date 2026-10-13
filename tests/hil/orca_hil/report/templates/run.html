@@ -1,0 +1,34 @@
+{% extends "base.html" %}
+{% from "macros.html" import pill, sha with context %}
+{% block title %}{{ run.run_id }} · ORCA HIL{% endblock %}
+{% block content %}
+<p class="eyebrow">{{ run.tier }} tier run</p>
+<h1 class="mono" style="font-size: 1.4rem; overflow-wrap: anywhere">{{ run.run_id }}</h1>
+<div class="testhead">{{ pill(run.status) }}<span class="muted">{{ run.started_utc }} → {{ run.ended_utc }}</span></div>
+<p>ORCA {{ sha(run) }} <span class="muted">on {{ run.git_branch }}</span> · UHD <span class="mono">{{ (run.uhd.commit or "unknown")[:12] }}</span>{% if run.uhd.dirty %} <span class="muted">(dirty)</span>{% endif %} · fixture <span class="mono">{{ run.fixture_id }}</span></p>
+{% if run.session_metrics %}<p>{% for m in run.session_metrics %}{{ m.name }} = {{ m.value | value }} {{ m.units }} {{ pill(m.status) }} {% endfor %}</p>{% endif %}
+
+{% for tid, doc in run.test_docs | dictsort %}
+<h2 id="{{ tid }}"><a href="../tests/{{ tid }}.html">{{ tid.upper() }}</a> {{ test_names.get(tid, "") }} {{ pill(doc.status) }}</h2>
+<p class="muted">{{ doc.duration_s | value }} s{% if doc.fixture_suspect %} · fixture suspect{% endif %}{% if doc.has_reduced %} · <a href="{{ run.run_id }}/{{ tid }}/reduced.zarr.zip">reduced.zarr.zip</a>{% endif %}</p>
+<div class="scroll">
+<table class="metrics">
+  <thead><tr><th>Metric</th><th>Case</th><th>Value</th><th>Units</th><th>Kind</th><th>Bound</th><th>Baseline</th><th>Status</th><th>Note</th></tr></thead>
+  <tbody>
+  {% for m in doc.metrics %}
+  <tr class="{{ m.status }}"><td>{{ m.name }}</td><td>{{ m.case or "" }}</td><td class="num">{{ m.value | value }}</td><td>{{ m.units or "" }}</td><td>{{ m.kind }}</td><td class="num">{{ m | bound }}</td><td class="num">{{ m | baseline }}</td><td>{{ pill(m.status) }}</td><td class="note">{{ m.note or "" }}</td></tr>
+  {% endfor %}
+  </tbody>
+</table>
+</div>
+{% if doc.plots %}
+<div class="plots" style="margin-top: 1rem">
+{% for p in doc.plots %}<figure><img src="{{ run.run_id }}/{{ tid }}/{{ p }}" alt="{{ tid.upper() }} {{ p }}" loading="lazy"><figcaption>{{ p }}</figcaption></figure>{% endfor %}
+</div>
+{% endif %}
+{% endfor %}
+
+<details><summary>Host, SDR and fixture configuration</summary>
+<pre>{{ run.configuration_text }}</pre>
+</details>
+{% endblock %}

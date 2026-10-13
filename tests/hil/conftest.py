@@ -32,6 +32,7 @@ def pytest_addoption(parser):
     g.addoption("--baseline-repeats", type=int, default=3)
     g.addoption("--replay", action="store_true", help="enable replay tests (needs golden data)")
     g.addoption("--publish", action="store_true", help="push results to the results repo")
+    g.addoption("--publish-plots", action="store_true", help="with --publish: include fast-tier plots of passing tests")
     g.addoption("--keep-raw", action="store_true", help="keep raw captures even for passing tests")
     g.addoption("--results-root", default=None, help="default <data_root>/runs")
 
@@ -62,9 +63,8 @@ def pytest_configure(config):
     for tid in TEST_IDS:
         config.addinivalue_line("markers", f"{tid}: HIL test {tid.upper()}")
 
-    for opt, phase in (("--publish", 6), ("--replay", 7)):
-        if config.getoption(opt):
-            raise pytest.UsageError(f"{opt} is not implemented yet (HIL plan Phase {phase})")
+    if config.getoption("--replay"):
+        raise pytest.UsageError("--replay is not implemented yet (HIL plan Phase 7)")
 
     config._hil = None
     if not config.getoption("--hil"):
@@ -293,6 +293,15 @@ def pytest_sessionfinish(session, exitstatus):
         "pytest_args": sys.argv[1:], "status": overall, "fixture_suspect": ctx.fixture_suspect,
         "tests": dict(sorted(ctx.test_status.items())), "session_metrics": session_metrics,
     }, ctx.run_dir / "run.yaml")
+    if session.config.getoption("--publish"):
+        from tests.hil.orca_hil import publish
+        try:
+            msg = publish.publish(ctx.run_dir, publish.default_repo(ctx.fixture),
+                                  publish_plots=session.config.getoption("--publish-plots"))
+            print(f"\npublished: {msg}")
+        except Exception as e:  # results are still in the run directory; publish later with publish.py
+            print(f"\npublish failed: {e}", file=sys.stderr)
+            session.exitstatus = session.exitstatus or 1
 
 
 def pytest_terminal_summary(terminalreporter, exitstatus, config):

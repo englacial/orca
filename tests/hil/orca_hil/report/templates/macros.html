@@ -1,0 +1,2 @@
+{% macro pill(status) %}<span class="pill s-{{ status }}">{{ status }}</span>{% endmacro %}
+{% macro sha(run) %}<a class="mono" href="{{ commit_url.format(run.git_sha) }}">{{ run.git_sha[:7] }}</a>{% if run.dirty %} <span class="muted">(dirty)</span>{% endif %}{% endmacro %}

@@ -42,6 +42,17 @@ Raw captures live under `<repo>/hil_scratch` (a symlink to
 to the repo). They are deleted when a test passes and moved to
 `<data_root>/kept/` when it fails, within `storage.kept_raw_quota_gb`.
 
+## Publishing results
+
+`--publish` commits the run to the results repo clone (`host.results_repo` in the
+fixture) and pushes it. Its site builds on GitHub Pages. To publish existing runs,
+or to build the site locally:
+
+```bash
+python -m tests.hil.orca_hil.publish [--no-push] <run_dir>...
+make hil-site    # writes $(HIL_SITE), default /mnt/nvme/orca-hil/site
+```
+
 ## Thresholds and baselines
 
 Every metric is listed in `thresholds.yaml` as `abs` (valid on any healthy
