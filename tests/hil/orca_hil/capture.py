@@ -82,7 +82,8 @@ class CaptureManager:
             src_cfg, src_log = cap.case_dir / "config.yaml", cap.case_dir / "uhd_stdout.log"
         for src, dest in ((src_cfg, tdir / "configs" / f"{cap.case}_config.yaml"),
                           (src_log, tdir / "logs" / f"{cap.case}_uhd_stdout.log"),
-                          (cap.case_dir / "uhd_stderr.log", tdir / "logs" / f"{cap.case}_uhd_stderr.log")):
+                          (cap.case_dir / "uhd_stderr.log", tdir / "logs" / f"{cap.case}_uhd_stderr.log"),
+                          (cap.case_dir / "runpy_stdout.log", tdir / "logs" / f"{cap.case}_runpy_stdout.log")):
             if src.exists() and src.stat().st_size:
                 dest.parent.mkdir(parents=True, exist_ok=True)
                 shutil.copy(src, dest)

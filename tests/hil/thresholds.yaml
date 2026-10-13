@@ -100,7 +100,9 @@ t03:
   # Plan name: narrowband_line_level_change_db. Recorded as the strongest line's level
   # above the median PSD, judged against its baseline.
   narrowband_max_line_db:  {kind: base, bound: {type: upper, tol: 6.0}, units: dB}
-  tx_isolation_margin_db:  {kind: abs, bound: {type: max, value: 3.0}, units: dB}
+  # Stacked power at the loopback index over the mean floor. On noise alone a single sample's
+  # power ratio is exponential: 8.4 dB = ln(1000) gives a 0.1% false-alarm rate.
+  tx_isolation_margin_db:  {kind: abs, bound: {type: max, value: 8.4}, units: dB}
   noise_at_nmax_dbfs:      {kind: base, bound: {type: upper, tol: 3.0}, units: dBFS}
 
 t04:
