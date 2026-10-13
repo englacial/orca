@@ -17,6 +17,9 @@ def test_majority_lines():
     out = majority_lines([a, b, c])
     assert len(out) == 1
     assert out[0]["level_db"] == 21.0
+    # A line missing from the last repeat still counts
+    assert len(majority_lines([a, c, b])) == 1
+    assert len(majority_lines([a, a, b])) == 2
 
 
 def _run(tmp_path, name, metrics, tid="t01"):

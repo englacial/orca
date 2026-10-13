@@ -13,6 +13,7 @@ NFFT = 4096
 STFT_WIN = 64
 STFT_OVERLAP = 48
 SPUR_THRESHOLD_DB = 10.0
+SPUR_JUDGE_MARGIN_DB = 6.0  # spurs within this of the threshold come and go between runs; not judged
 PRE_CHIRP_MARGIN = 8        # samples kept clear before the first received chirp
 FLOOR_MARGIN_DB = 6.0       # a DC estimate within this of its noise floor is a bound only
 OCC_BW_DB = 10.0
@@ -107,8 +108,10 @@ def analyze_spectral(captures, fixture, params=None):
                    Measurement("new_spurs_above_baseline", len(found), case="a", inconclusive=True,
                                note="no baseline spur list")]
         else:
-            missing = [r for r in ref if not match_lines([r], found)[1]]
+            judged = SPUR_THRESHOLD_DB + SPUR_JUDGE_MARGIN_DB
+            missing = [r for r in ref if r["level_db"] >= judged and not match_lines([r], found)[1]]
             new, matched = match_lines(found, ref)
+            new = [ln for ln in new if ln["level_db"] >= judged]
             raised = [ln for ln, r in matched if ln["level_db"] > r["level_db"] + 6]
             ms += [Measurement("spur_freqs_match", not missing, case="a",
                                note=f"{len(missing)} baseline spurs not found"),

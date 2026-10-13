@@ -12,7 +12,7 @@ import sys
 from pathlib import Path
 
 from . import yamlio
-from .analysis.noise import match_lines
+from .analysis.noise import LINE_MATCH_HZ
 from .baselines import Baselines
 
 CHILD_ENV = "ORCA_HIL_BASELINE_CHILD"
@@ -74,17 +74,22 @@ def collect_base_values(run_dirs, include_inconclusive=False):
     return out
 
 
-def majority_lines(line_lists, tol_hz=None):
-    """Lines present in more than half of the repeats (frequency and level averaged)."""
-    kw = {} if tol_hz is None else {"tol_hz": tol_hz}
-    if not line_lists:
-        return []
-    out = []
-    for ln in line_lists[-1]:
-        hits = [ln] + [m[0] for other in line_lists[:-1] for m in match_lines(other, [ln], **kw)[1]]
-        if len(hits) * 2 > len(line_lists):
-            out.append({"freq": float(sum(h["freq"] for h in hits) / len(hits)),
-                        "level_db": float(sum(h["level_db"] for h in hits) / len(hits))})
+def majority_lines(line_lists, tol_hz=LINE_MATCH_HZ):
+    """Lines present in more than half of the repeats (frequency and level averaged).
+
+    Lines from all repeats are grouped by frequency (gaps <= tol_hz chain into one group).
+    """
+    tagged = sorted(((ln["freq"], ln["level_db"], i) for i, lines in enumerate(line_lists) for ln in lines))
+    groups, out = [], []
+    for t in tagged:
+        if groups and t[0] - groups[-1][-1][0] <= tol_hz:
+            groups[-1].append(t)
+        else:
+            groups.append([t])
+    for g in groups:
+        if len({i for _, _, i in g}) * 2 > len(line_lists):
+            out.append({"freq": float(sum(f for f, _, _ in g) / len(g)),
+                        "level_db": float(sum(lv for _, lv, _ in g) / len(g))})
     return out
 
 
