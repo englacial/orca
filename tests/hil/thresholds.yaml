@@ -145,7 +145,9 @@ t06:  # power_loss_db per integration time (case), relative to single pulses
 
 t07:
   errors_in_captures:        {kind: info, units: count}
-  phase_drift_mdeg_per_s:    {kind: abs, bound: {type: abs_max, value: 0.5}, units: mdeg/s}
+  # Slow drift follows ambient temperature (50 m cable); seen -0.3 to +0.9 mdeg/s. An LO fault
+  # would be orders of magnitude larger (1 Hz offset = 3.6e5 mdeg/s).
+  phase_drift_mdeg_per_s:    {kind: abs, bound: {type: abs_max, value: 2.0}, units: mdeg/s}
   phase_var_to_theory_ratio: {kind: abs, bound: {type: range, lo: 0.7, hi: 1.5}, units: ratio}
   phase_steps_count:         {kind: abs, bound: {type: equals, value: 0}, units: count}
   residual_std_deg:          {kind: base, bound: {type: ratio_upper, factor: 1.5}, units: deg}
