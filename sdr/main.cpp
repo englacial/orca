@@ -1,4 +1,5 @@
 #include "main.hpp"
+#include <atomic>
 
 /*
  * SIG INT HANDLER
@@ -23,9 +24,11 @@ size_t num_tx_samps; // Total samples to transmit per chirp
 size_t num_rx_samps; // Total samples to receive per chirp
 
 // Global state
-long int pulses_scheduled = 0;
-long int pulses_received = 0;
-long int error_count = 0;
+// Shared between the RX and TX threads
+std::atomic<long> pulses_scheduled{0};
+std::atomic<long> pulses_received{0};
+std::atomic<long> error_count{0};
+std::atomic<bool> tx_done{false};
 long int last_pulse_num_written = -1; // Index number (pulses_received - error_count) of last sample written to outfile
 
 // Cout mutex
@@ -453,6 +456,14 @@ int UHD_SAFE_MAIN(int argc, char *argv[]) {
 
   while ((chirp.getNumPulses() < 0) || (last_pulse_num_written < chirp.getNumPulses())) {
 
+    // Nothing more will arrive once TX has exited and every scheduled pulse is accounted for
+    if (tx_done && pulses_received >= pulses_scheduled) {
+      cout_mutex.lock();
+      cout << "[RX] TX finished and no pulses in flight; stopping with " << last_pulse_num_written << " pulses written" << endl;
+      cout_mutex.unlock();
+      break;
+    }
+
     n_samps_in_rx_buff = sdr.getRxStream()->recv(buffs, num_rx_samps, rx_md, 60.0, false); // TODO: Think about timeout
 
     // Check for errors in the RX buffer
@@ -602,6 +613,7 @@ void transmit_worker(tx_streamer::sptr& tx_stream, rx_streamer::sptr& rx_stream,
 
   long int last_error_count = 0;
   double error_delay = 0;
+  const double reanchor_lead = 0.01; // Seconds ahead of device time to schedule top-up pulses at the end of a run
 
   while ((chirp.getNumPulses() < 0) || ((pulses_scheduled - error_count) < chirp.getNumPulses()))
   {
@@ -631,9 +643,17 @@ void transmit_worker(tx_streamer::sptr& tx_stream, rx_streamer::sptr& rx_stream,
 
     if (error_count > last_error_count) {
       error_delay = (error_count - last_error_count) * 2 * chirp.getPulseRepInt();
+      // Errors arrived after all TX pulses scheduled, check that next scheduled time would be sufficiently in the future
+      if (chirp.getNumPulses() >= 0 && (pulses_scheduled - last_error_count) >= chirp.getNumPulses()) {
+        double min_next = sdr.getUsrp()->get_time_now().get_real_secs() + reanchor_lead;
+        double next = chirp.getTimeOffset() + error_delay + chirp.getPulseRepInt() * pulses_scheduled;
+        if (next < min_next) {
+          error_delay += min_next - next;
+        }
+      }
       chirp.setTimeOffset(chirp.getTimeOffset() + error_delay);
       cout_mutex.lock();
-      cout << "[TX] (Chirp " << pulses_scheduled << ") time_offset increased by " << error_delay << endl;
+      cout << "[TX] (Chirp " << pulses_scheduled << ") time_offset increased by " << setprecision(12) << error_delay << endl;
       cout_mutex.unlock();
       last_error_count = error_count;
     }
@@ -657,7 +677,16 @@ void transmit_worker(tx_streamer::sptr& tx_stream, rx_streamer::sptr& rx_stream,
       cout << "[TX] stop signal called -> break" << endl;
       break;
     }
+
+    // Wait for in-flight pulses so their errors are counted before deciding we're done.
+    // If errors left us short, the loop condition schedules more.
+    if (chirp.getNumPulses() >= 0 && (pulses_scheduled - error_count) >= chirp.getNumPulses()) {
+      while (pulses_received < pulses_scheduled && !stop_signal_called) {
+        boost::this_thread::sleep_for(boost::chrono::microseconds(10));
+      }
+    }
   }
+  tx_done = true;
 
   cout << "[TX] Closing file" << endl;
   infile.close();
