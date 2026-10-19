@@ -100,3 +100,4 @@ footer { margin-top: 3rem; font-size: 0.8rem; color: var(--muted); }
 .legend span.text::before { display: none; }
 figure.summary { max-width: 52rem; margin-bottom: 0.5rem; }
 details.metrics-box { margin-top: 0.5rem; }
+.runlist { list-style: none; padding: 0; display: grid; gap: 0.25rem; font-size: 0.88rem; }

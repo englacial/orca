@@ -4,6 +4,7 @@
 {% block content %}
 <p class="eyebrow">{{ tid.upper() }}</p>
 <h1>{{ test_names.get(tid, tid) }}</h1>
+{% if description %}<p>{{ description }}</p>{% endif %}
 <p class="muted">{{ runs | length }} runs. Points are colored by status; hollow points come from a dirty tree. The shaded band is the bound in force at each run, grey dashes mark baseline updates and blue dots mark UHD changes.</p>
 {% for t in tiers %}
 <h2>{{ t.tier | capitalize }} tier trends</h2>
@@ -13,10 +14,16 @@
 {% else %}<p class="muted">No numeric metrics recorded yet.</p>{% endfor %}
 
 <h2>Summary plots</h2>
+{% if n_gallery > gallery | length %}<p class="muted">Latest {{ gallery | length }} of {{ n_gallery }}. Older summary plots are on each run's page; see <a href="#all-runs">all runs</a>.</p>{% endif %}
 {% if gallery %}
 <div class="plots">
 {% for g in gallery %}<figure><a href="../runs/{{ g.run.run_id }}.html#{{ tid }}"><img src="{{ g.plot }}" alt="{{ tid.upper() }} summary for {{ g.run.run_id }}" loading="lazy"></a>
 <figcaption><span class="mono">{{ g.run.run_id }}</span> {{ pill(g.run.tests.get(tid)) }}</figcaption></figure>{% endfor %}
 </div>
 {% else %}<p class="muted">No summary plots published. Fast-tier plots are published only for failed tests.</p>{% endif %}
+
+<h2 id="all-runs">All runs</h2>
+<ul class="runlist">
+{% for r in runs %}<li><a class="mono" href="../runs/{{ r.run_id }}.html#{{ tid }}">{{ r.run_id }}</a> {{ pill(r.tests.get(tid)) }}</li>
+{% endfor %}</ul>
 {% endblock %}

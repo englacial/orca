@@ -28,6 +28,32 @@ TEST_NAMES = {
     "t07": "Long-term phase stability", "t08": "Gain linearity", "t09": "Duty cycle",
     "t10": "Error recovery", "t11": "Presumming", "t12": "Frequency response", "session": "Session",
 }
+TEST_DESCRIPTIONS = {
+    "t00": "Checks the UHD install, the SDR and the loopback fixture before anything else runs. "
+           "Other hardware tests are skipped if it fails.",
+    "t01": "Runs the full capture pipeline (harness runner, run.py, Ctrl-C shutdown and split files) and checks "
+           "that every pulse arrives intact, with a stable loopback peak and a low late-command error rate.",
+    "t02": "Measures range sidelobes of the compressed loopback pulse for each window function and compares "
+           "them with the window's ideal sidelobe level.",
+    "t03": "Records with the transmitter off to check the noise floor is Gaussian and free of interference. "
+           "A failure flags T4-T7 as fixture suspect.",
+    "t04": "Looks for LO leakage, PLL spurs and chirp copies in the spectrum, with and without phase dithering "
+           "and a software LO offset.",
+    "t05": "Checks that coherent stacking lowers the noise floor as expected and that phase dithering "
+           "suppresses coherent artifacts.",
+    "t06": "Measures how coherent the loopback phase stays as integration time grows, from single pulses to "
+           "minutes.",
+    "t07": "Tracks the loopback phase over a 25 minute capture to measure slow drift and residual phase noise.",
+    "t08": "Sweeps TX and RX gain and checks that received power follows the commanded gain until "
+           "compression.",
+    "t09": "Sweeps duty cycle and measures the late-command error rate, locating the knee above which "
+           "pulses start to drop.",
+    "t10": "Runs just above the duty-cycle knee so errors occur, then checks that the radar recovers and "
+           "that phase stays continuous across dropped pulses.",
+    "t11": "Checks that on-device presumming gives the same result as stacking single pulses offline.",
+    "t12": "Sweeps the RF center frequency and measures the loopback power, leakage and noise floor at each.",
+}
+GALLERY_RUNS = 3
 TEMPLATES = Path(__file__).parent / "templates"
 
 
@@ -204,7 +230,8 @@ def build(results, out):
                    for r in runs if "summary.png" in r["test_docs"].get(tid, {}).get("plots", [])]
         (out / "tests").mkdir(exist_ok=True)
         (out / "tests" / f"{tid}.html").write_text(env.get_template("test.html").render(
-            root="../", tid=tid, tiers=tiers, gallery=gallery,
+            root="../", tid=tid, tiers=tiers, gallery=gallery[:GALLERY_RUNS], n_gallery=len(gallery),
+            description=TEST_DESCRIPTIONS.get(tid, ""),
             runs=[r for r in runs if tid in r.get("tests", {})], **common))
 
     # Index
