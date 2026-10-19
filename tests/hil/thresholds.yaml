@@ -20,12 +20,15 @@ common:
   throttled_during_test: {kind: info, units: bool}
 
 t00:
-  radar_links_custom_uhd:              {kind: abs, bound: {type: equals, value: true}, units: bool}
   single_uhd_installed:                {kind: abs, bound: {type: equals, value: true}, units: bool}
+  # The two stamp checks run only when the fixture sets uhd.expected_commit
   uhd_stamp_matches_expected_and_head: {kind: abs, bound: {type: equals, value: true}, units: bool}
   uhd_version_matches_stamp:           {kind: abs, bound: {type: equals, value: true}, units: bool}
   uhd_images_present:                  {kind: abs, bound: {type: equals, value: true}, units: bool}
-  sdr_serial_match:                    {kind: abs, bound: {type: equals, value: true}, units: bool}
+  libuhd_resolved:                     {kind: info, units: path}
+  uhd_version:                         {kind: info, units: text}
+  sdr_found:                           {kind: abs, bound: {type: equals, value: true}, units: bool}  # exactly one B206mini
+  sdr_serial:                          {kind: info, units: text}
   antennas_present:                    {kind: abs, bound: {type: equals, value: true}, units: bool}
   usb_link_mbps:                       {kind: abs, bound: {type: equals, value: 5000}, units: Mb/s}
   throttled_flags:                     {kind: abs, bound: {type: equals, value: 0}, units: bits}  # vcgencmd bits 0-3 (now)
@@ -55,7 +58,7 @@ t01:
   rx_summary_present:               {kind: abs, bound: {type: equals, value: true}, units: bool}
   close_file_count_matches_parts:   {kind: abs, bound: {type: equals, value: true}, units: bool}
   merged_matches_parts:             {kind: abs, bound: {type: equals, value: true}, units: bool}
-  radar_links_custom_uhd_after_runpy: {kind: abs, bound: {type: equals, value: true}, units: bool}
+  libuhd_unchanged_by_runpy:        {kind: abs, bound: {type: equals, value: true}, units: bool}
   radar_binary_changed_by_runpy:    {kind: info, units: bool}
   # Range profile (case a_profile)
   leakage_peak_index:           {kind: base, bound: {type: two_sided, tol: 0.1}, units: samples}

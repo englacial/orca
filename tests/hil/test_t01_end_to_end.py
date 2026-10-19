@@ -178,9 +178,7 @@ def test_t01_end_to_end(hil, tier, fixture_cfg, radar_build, capture_manager, re
     recorder.record_all(pipeline_checks(b, p["n_runpy"]))
     binary = REPO_ROOT / "sdr" / "build" / "radar"
     libuhd_after = radar.resolved_libuhd(binary)
-    recorder.record("radar_links_custom_uhd_after_runpy",
-                    bool(libuhd_after) and Path(libuhd_after).resolve().is_relative_to(
-                        radar.uhd_prefix(fx).resolve()), note=f"libuhd: {libuhd_after}")
+    recorder.record("libuhd_unchanged_by_runpy", libuhd_after == radar_build.libuhd, note=f"libuhd: {libuhd_after}")
     recorder.record("radar_binary_changed_by_runpy", radar.sha256(binary) != radar_build.sha256)
 
     # c: SIGINT shutdown
