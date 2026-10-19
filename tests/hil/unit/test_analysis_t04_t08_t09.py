@@ -63,6 +63,9 @@ def test_sweep_fit_linear_and_compressed():
     assert used[g > p1db - 10].sum() == 0
     slope2, p1db2, _ = sweep_fit(g[:10], lin[:10], noise[:10])
     assert slope2 == pytest.approx(1.0) and p1db2 is None
+    # Drops below the line with a small raw signal are not compression when min_raw is set
+    _, p1db3, _ = sweep_fit(g, level, noise, raw_max=np.full_like(g, 0.05), min_raw=0.5)
+    assert p1db3 is None
 
 
 def test_t08_tx_sweep_on_sim(radar_cfg, fixture_cfg, make_capture):
@@ -78,6 +81,10 @@ def test_t08_tx_sweep_on_sim(radar_cfg, fixture_cfg, make_capture):
     assert m[("dbfs_at_base_gain", None)].value == pytest.approx(-60.0, abs=0.1)
     assert ("p1db_tx_gain", None) not in m          # full tier only
     assert list(reduced["gain"].values) == [23, 29, 35, 41, 47]
+    _, ms = analyze_gain(points, fixture_cfg, {"base_tx_gain": 35, "base_rx_gain": 40, "full": True})
+    m = by_name(ms)
+    assert ("p1db_tx_gain", None) not in m and m[("linear_to_tx_gain", None)].value == 47
+    assert m[("linear_range_db", None)].value > 30
 
 
 def test_knee():

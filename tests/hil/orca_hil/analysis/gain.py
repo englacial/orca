@@ -9,6 +9,7 @@ from .profile import locate_peaks, single_pulse_stats
 MIN_SNR_DB = 10.0
 COMPRESSION_DB = 1.0
 LINEAR_MARGIN_DB = 10.0
+RX_COMPRESSION_MIN_RAW = 0.5   # RX-sweep compression needs a large input; below this it is gain-table drift
 
 
 def point_metrics(capture, fixture):
@@ -28,17 +29,18 @@ def point_metrics(capture, fixture):
             "noise_dbfs": float(db10(np.mean(np.abs(noise) ** 2)))}
 
 
-def sweep_fit(gains, levels, noise):
+def sweep_fit(gains, levels, noise, raw_max=None, min_raw=0.0):
     """Slope over the linear region and the 1 dB compression point.
 
     The linear reference has unit slope through the low-gain points with SNR >= 10 dB.
-    P1dB is the first gain where the level falls 1 dB below it. The slope is fitted
-    over points with SNR >= 10 dB and at least 10 dB below P1dB (all such points if
-    there is no compression in the sweep).
+    P1dB is the first gain where the level falls 1 dB below it, counting only points whose
+    raw max is at least min_raw. The slope is fitted over points with SNR >= 10 dB and at
+    least 10 dB below P1dB (all such points if there is no compression in the sweep).
     """
     g, lv, nz = map(np.asarray, (gains, levels, noise))
+    rm = np.full(len(g), np.inf) if raw_max is None else np.asarray(raw_max)
     order = np.argsort(g)
-    g, lv, nz = g[order], lv[order], nz[order]
+    g, lv, nz, rm = g[order], lv[order], nz[order], rm[order]
     ok = lv - nz >= MIN_SNR_DB
     if ok.sum() < 2:
         return np.nan, None, ok
@@ -47,7 +49,7 @@ def sweep_fit(gains, levels, noise):
     dev = lv - (g + offset)
     p1db = None
     for i in np.nonzero(ok)[0]:
-        if dev[i] < -COMPRESSION_DB:
+        if dev[i] < -COMPRESSION_DB and rm[i] >= min_raw:
             j = i - 1
             p1db = float(g[i]) if j < 0 else float(np.interp(-COMPRESSION_DB, [dev[i], dev[j]], [g[i], g[j]]))
             break
@@ -73,7 +75,8 @@ def analyze_gain(points, fixture, params):
         if not r:
             continue
         gains = [x["gain"] for x in r]
-        slope, p1db, lin = sweep_fit(gains, [x["loopback_dbfs"] for x in r], [x["noise_dbfs"] for x in r])
+        slope, p1db, lin = sweep_fit(gains, [x["loopback_dbfs"] for x in r], [x["noise_dbfs"] for x in r],
+                                     [x["raw_max"] for x in r], RX_COMPRESSION_MIN_RAW if sweep == "rx" else 0.0)
         fits[sweep] = {"slope": slope, "p1db": p1db}
         ms.append(Measurement(f"{sweep}_sweep_slope_db_per_db", slope, note=f"{int(np.sum(lin))} points in fit"))
         if sweep == "tx":
@@ -82,14 +85,15 @@ def analyze_gain(points, fixture, params):
             at_base = float(np.interp(params["base_tx_gain"], np.array(gains)[order], levels[order]))
             ms.append(Measurement("dbfs_at_base_gain", at_base))
             if params.get("full"):
-                ms.append(Measurement("p1db_tx_gain", np.nan if p1db is None else p1db,
-                                      inconclusive=p1db is None,
-                                      note=None if p1db is not None else "no compression within the sweep"))
                 noise = float(np.median([x["noise_dbfs"] for x in r]))
-                top = (float(np.interp(p1db, np.array(gains)[order], levels[order])) if p1db is not None
-                       else float(levels.max()))
-                ms.append(Measurement("dynamic_range_db", top - noise, inconclusive=p1db is None,
-                                      note=None if p1db is not None else "max level used: no compression"))
+                if p1db is not None:
+                    ms.append(Measurement("p1db_tx_gain", p1db))
+                    top = float(np.interp(p1db, np.array(gains)[order], levels[order]))
+                    ms.append(Measurement("dynamic_range_db", top - noise))
+                else:
+                    ms.append(Measurement("linear_to_tx_gain", max(gains), note="no compression within the sweep"))
+                    ms.append(Measurement("linear_range_db", float(levels.max()) - noise,
+                                          note="top of sweep minus noise floor"))
 
     dims = {"point": np.arange(len(rows))}
     reduced = xr.Dataset(

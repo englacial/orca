@@ -24,7 +24,7 @@ storage:
   kept_raw_quota_gb: 100
   run_retention_days: 60
 safety:
-  tx_gain_max: 75
+  tx_gain_max: 89.8             # device maximum; the 30 dB pad keeps RX input far below damage
   rx_clip_fraction_max: 0.9
   attenuator_check:
     tx_gain: 15.0                # set at commissioning

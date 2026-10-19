@@ -155,6 +155,9 @@ t08:
   p1db_tx_gain:             {kind: base, bound: {type: two_sided, tol: 2.0}, units: dB}
   dbfs_at_base_gain:        {kind: base, bound: {type: two_sided, tol: 1.0}, units: dBFS}
   dynamic_range_db:         {kind: base, bound: {type: two_sided, tol: 2.0}, units: dB}
+  # Recorded instead of the two above when the sweep never compresses
+  linear_to_tx_gain:        {kind: info, units: dB}
+  linear_range_db:          {kind: base, bound: {type: two_sided, tol: 2.0}, units: dB}
 
 t09:
   error_rate:                          {kind: info, units: fraction}   # per duty point
