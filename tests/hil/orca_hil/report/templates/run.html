@@ -18,12 +18,15 @@
 <details class="metrics-box"{% if flagged %} open{% endif %}><summary>Metrics ({{ doc.metrics | length }}{% if flagged %}, {{ flagged | length }} flagged{% endif %})</summary>
 <div class="scroll">
 <table class="metrics">
-  <thead><tr><th>Metric</th><th>Case</th><th>Value</th><th>Units</th><th>Kind</th><th>Bound</th><th>Baseline</th><th>Status</th><th>Note</th></tr></thead>
+  <thead><tr><th>Metric</th><th>Value</th><th>Units</th><th>Kind</th><th>Bound</th><th>Baseline</th><th>Status</th><th>Note</th></tr></thead>
+  {% for case, ms in doc.groups %}
   <tbody>
-  {% for m in doc.metrics %}
-  <tr class="{{ m.status }}"><td>{{ m.name }}</td><td>{{ m.case or "" }}</td><td class="num">{{ m.value | value }}</td><td>{{ m.units or "" }}</td><td>{{ m.kind }}</td><td class="num">{{ m | bound }}</td><td class="num">{{ m | baseline }}</td><td>{{ pill(m.status) }}</td><td class="note">{{ m.note or "" }}</td></tr>
+  {% if case or doc.groups | length > 1 %}<tr class="case"><th colspan="8">{{ case or "test-level" }}</th></tr>{% endif %}
+  {% for m in ms %}
+  <tr class="{{ m.status }}"><td>{{ m.name }}</td><td class="num">{{ m.value | value }}</td><td>{{ m.units or "" }}</td><td>{{ m.kind }}</td><td class="num">{{ m | bound }}</td><td class="num">{{ m | baseline }}</td><td>{{ pill(m.status) }}</td><td class="note">{{ m.note or "" }}</td></tr>
   {% endfor %}
   </tbody>
+  {% endfor %}
 </table>
 </div>
 </details>

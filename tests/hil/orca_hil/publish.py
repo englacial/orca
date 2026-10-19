@@ -56,12 +56,19 @@ def _row(run, uhd, test_id, m, suspect):
     }
 
 
+def uhd_info(conf):
+    """UHD build stamp from configuration.yaml; without one, the version string stands in for the commit."""
+    if not conf.exists():
+        return {}
+    c = yamlio.load(conf)
+    return c.get("uhd_build_stamp") or {"commit": c.get("uhd_version")}
+
+
 def history_rows(run_dir):
     """One dict per metric (tests in order, then session metrics), keyed by HISTORY_COLUMNS."""
     run_dir = Path(run_dir)
     run = yamlio.load(run_dir / "run.yaml")
-    conf = run_dir / "configuration.yaml"
-    uhd = (yamlio.load(conf).get("uhd_build_stamp") or {}) if conf.exists() else {}
+    uhd = uhd_info(run_dir / "configuration.yaml")
     rows = []
     for mpath in sorted(run_dir.glob("t*/metrics.yaml")):
         doc = yamlio.load(mpath)

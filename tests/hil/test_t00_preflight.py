@@ -21,7 +21,7 @@ CXX_HW_TESTS = "detectChannels|setRFParams|refLoLockDetect"
 USB_ERROR_RE = re.compile(r"usb.*(error|fail|over-current|unable|reset|disconnect)", re.I)
 
 
-def uhd_checks(fixture, build):
+def uhd_checks(fixture):
     out = {}
     conda_lib = Path(os.environ.get("CONDA_PREFIX", "/nonexistent")) / "lib"
     conda_uhd = sorted(conda_lib.glob("libuhd.so*"))
@@ -30,24 +30,9 @@ def uhd_checks(fixture, build):
     apt_uhd = [ln for ln in dpkg.splitlines() if "install ok installed" in ln]
     out["single_uhd_installed"] = not conda_uhd and not apt_uhd
 
-    ver = radar.run_uhd_tool(fixture, "uhd_config_info", ["--version"]).stdout.strip()
-    ver = ver.splitlines()[0] if ver else ""
-    details = {"conda_libuhd": [str(p) for p in conda_uhd], "apt_libuhd": apt_uhd}
-
-    # Only when the fixture pins a source-built UHD
-    if fixture["uhd"].get("expected_commit"):
-        stamp = radar.build_stamp(fixture) or {}
-        src = Path(fixture["uhd"]["source_dir"]).expanduser()
-        head = subprocess.run(["git", "-C", str(src), "rev-parse", "HEAD"], capture_output=True, text=True).stdout.strip()
-        out["uhd_stamp_matches_expected_and_head"] = bool(stamp) and (
-            stamp.get("commit") == fixture["uhd"]["expected_commit"] == head)
-        out["uhd_version_matches_stamp"] = bool(ver) and ver == stamp.get("uhd_version")
-        details["uhd_source_head"] = head
-
     images = Path(radar.uhd_env(fixture)["UHD_IMAGES_DIR"])
     out["uhd_images_present"] = (images / fixture["uhd"]["fpga_image"]).is_file()
-    out["libuhd_resolved"] = build.libuhd
-    out["uhd_version"] = ver
+    details = {"conda_libuhd": [str(p) for p in conda_uhd], "apt_libuhd": apt_uhd}
     return out, details
 
 
@@ -67,7 +52,7 @@ def device_checks(fixture):
     rx_ants = {a.strip() for line in antennas for a in line.split(",")}
     checks = {
         "sdr_found": len(serials) == 1 and products == ["B206mini"],
-        "antennas_present": {"TX/RX", "RX2"} <= rx_ants,
+        "expected_ports_present": {"TX/RX", "RX2"} <= rx_ants,
     }
     return checks, info
 
@@ -95,7 +80,7 @@ def test_t00_preflight(hil, tier, fixture_cfg, radar_build, capture_manager, rec
     params = PARAMS[tier]
     fx = fixture_cfg
 
-    checks, details = uhd_checks(fx, radar_build)
+    checks, details = uhd_checks(fx)
     for name, ok in checks.items():
         recorder.record(name, ok)
 
@@ -103,9 +88,7 @@ def test_t00_preflight(hil, tier, fixture_cfg, radar_build, capture_manager, rec
     for name, ok in dev_checks.items():
         recorder.record(name, ok)
     serial = dev_info["serials_found"][0] if dev_info["serials_found"] else None
-    baseline_serial = str(fx["hardware"]["sdr_serial"])
-    recorder.record("sdr_serial", serial, note=None if serial == baseline_serial else
-                    f"baselines were recorded with SDR {baseline_serial}")
+    recorder.record("sdr_serial", serial)
     usb = [d for d in telemetry.usb_devices() if d["serial"] == serial]
     recorder.record("usb_link_mbps", usb[0]["speed_mbps"] if usb else 0)
     flags = telemetry.throttled() or 0

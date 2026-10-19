@@ -18,6 +18,7 @@ import matplotlib.dates as mdates
 from jinja2 import Environment, FileSystemLoader, select_autoescape
 
 from .. import plotting, yamlio
+from ..publish import uhd_info
 from ..plotting import plt
 
 ORCA_COMMIT_URL = "https://github.com/englacial/orca/commit/{}"
@@ -72,13 +73,17 @@ def load_runs(results):
         run["dir"] = rdir
         conf = rdir / "configuration.yaml"
         run["configuration_text"] = conf.read_text() if conf.exists() else ""
-        run["uhd"] = (yamlio.load(conf).get("uhd_build_stamp") or {}) if conf.exists() else {}
+        run["uhd"] = uhd_info(conf)
         run["started"] = datetime.strptime(run["started_utc"], "%Y-%m-%dT%H:%M:%SZ")
         run["test_docs"] = {}
         for mpath in sorted(rdir.glob("t*/metrics.yaml")):
             doc = yamlio.load(mpath)
             doc["plots"] = sorted(p.name for p in mpath.parent.glob("*.png"))
             doc["has_reduced"] = (mpath.parent / "reduced.zarr.zip").exists()
+            groups = {}
+            for m in doc.get("metrics", []):
+                groups.setdefault(m.get("case"), []).append(m)
+            doc["groups"] = sorted(groups.items(), key=lambda kv: kv[0] is not None)
             run["test_docs"][mpath.parent.name] = doc
         # run.yaml holds the pytest outcome; a passing test with inconclusive metrics is shown as such
         run["tests"] = {tid: "inconclusive" if s == "pass" and run["test_docs"].get(tid, {}).get("status") == "inconclusive"
