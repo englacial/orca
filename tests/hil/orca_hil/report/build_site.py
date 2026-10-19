@@ -29,29 +29,19 @@ TEST_NAMES = {
     "t10": "Error recovery", "t11": "Presumming", "t12": "Frequency response", "session": "Session",
 }
 TEST_DESCRIPTIONS = {
-    "t00": "Checks the UHD install, the SDR and the loopback fixture before anything else runs. "
-           "Other hardware tests are skipped if it fails.",
-    "t01": "Runs the full capture pipeline (harness runner, run.py, Ctrl-C shutdown and split files) and checks "
-           "that every pulse arrives intact, with a stable loopback peak and a low late-command error rate.",
-    "t02": "Measures range sidelobes of the compressed loopback pulse for each window function and compares "
-           "them with the window's ideal sidelobe level.",
-    "t03": "Records with the transmitter off to check the noise floor is Gaussian and free of interference. "
-           "A failure flags T4-T7 as fixture suspect.",
-    "t04": "Looks for LO leakage, PLL spurs and chirp copies in the spectrum, with and without phase dithering "
-           "and a software LO offset.",
-    "t05": "Checks that coherent stacking lowers the noise floor as expected and that phase dithering "
-           "suppresses coherent artifacts.",
-    "t06": "Measures how coherent the loopback phase stays as integration time grows, from single pulses to "
-           "minutes.",
-    "t07": "Tracks the loopback phase over a 25 minute capture to measure slow drift and residual phase noise.",
-    "t08": "Sweeps TX and RX gain and checks that received power follows the commanded gain until "
-           "compression.",
-    "t09": "Sweeps duty cycle and measures the late-command error rate, locating the knee above which "
-           "pulses start to drop.",
-    "t10": "Runs just above the duty-cycle knee so errors occur, then checks that the radar recovers and "
-           "that phase stays continuous across dropped pulses.",
-    "t11": "Checks that on-device presumming gives the same result as stacking single pulses offline.",
-    "t12": "Sweeps the RF center frequency and measures the loopback power, leakage and noise floor at each.",
+    "t00": "Checks the UHD install, SDR and loopback fixture; other hardware tests are skipped if it fails.",
+    "t01": "Runs the whole capture pipeline and checks every pulse arrives intact with few late-command errors.",
+    "t02": "Measures range sidelobes of the compressed loopback pulse for each window against the ideal window.",
+    "t03": "Records with TX off to check the noise is Gaussian and interference-free; a failure flags T4-T7.",
+    "t04": "Looks for LO leakage, PLL spurs and chirp copies, with and without phase dithering and LO offset.",
+    "t05": "Checks that coherent stacking lowers the noise floor and phase dithering suppresses artifacts.",
+    "t06": "Measures how long the loopback phase stays coherent as integration time grows.",
+    "t07": "Tracks the loopback phase over a 25 minute capture for slow drift and residual phase noise.",
+    "t08": "Sweeps TX and RX gain and checks that received power follows the commanded gain.",
+    "t09": "Sweeps duty cycle and measures the late-command error rate to find where pulses start to drop.",
+    "t10": "Runs just above the duty-cycle knee and checks error recovery and phase continuity.",
+    "t11": "Checks that on-device presumming matches stacking single pulses offline.",
+    "t12": "Sweeps the RF center frequency and measures loopback power, leakage and noise floor.",
 }
 GALLERY_RUNS = 3
 TEMPLATES = Path(__file__).parent / "templates"

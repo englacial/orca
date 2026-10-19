@@ -5,7 +5,11 @@
 <p class="eyebrow">{{ tid.upper() }}</p>
 <h1>{{ test_names.get(tid, tid) }}</h1>
 {% if description %}<p>{{ description }}</p>{% endif %}
-<p class="muted">{{ runs | length }} runs. Points are colored by status; hollow points come from a dirty tree. The shaded band is the bound in force at each run, grey dashes mark baseline updates and blue dots mark UHD changes.</p>
+{% if gallery %}{% set g = gallery[0] %}
+<figure class="summary"><a href="../runs/{{ g.run.run_id }}.html#{{ tid }}"><img src="{{ g.plot }}" alt="{{ tid.upper() }} summary for {{ g.run.run_id }}"></a>
+<figcaption>Latest summary: <span class="mono">{{ g.run.run_id }}</span> {{ pill(g.run.tests.get(tid)) }}</figcaption></figure>
+{% endif %}
+<p class="muted">{{ runs | length }} runs. Points are colored by status; hollow points are runs from an ORCA checkout with uncommitted changes. The shaded band is the bound in force at each run, grey dashes mark baseline updates and blue dots mark UHD changes.</p>
 {% for t in tiers %}
 <h2>{{ t.tier | capitalize }} tier trends</h2>
 <div class="plots">
@@ -13,14 +17,14 @@
 </div>
 {% else %}<p class="muted">No numeric metrics recorded yet.</p>{% endfor %}
 
-<h2>Summary plots</h2>
-{% if n_gallery > gallery | length %}<p class="muted">Latest {{ gallery | length }} of {{ n_gallery }}. Older summary plots are on each run's page; see <a href="#all-runs">all runs</a>.</p>{% endif %}
-{% if gallery %}
+<h2>Earlier summary plots</h2>
+{% if n_gallery > gallery | length %}<p class="muted">Showing {{ gallery | length - 1 }} more of {{ n_gallery }}. Older summary plots are on each run's page; see <a href="#all-runs">all runs</a>.</p>{% endif %}
+{% if gallery | length > 1 %}
 <div class="plots">
-{% for g in gallery %}<figure><a href="../runs/{{ g.run.run_id }}.html#{{ tid }}"><img src="{{ g.plot }}" alt="{{ tid.upper() }} summary for {{ g.run.run_id }}" loading="lazy"></a>
+{% for g in gallery[1:] %}<figure><a href="../runs/{{ g.run.run_id }}.html#{{ tid }}"><img src="{{ g.plot }}" alt="{{ tid.upper() }} summary for {{ g.run.run_id }}" loading="lazy"></a>
 <figcaption><span class="mono">{{ g.run.run_id }}</span> {{ pill(g.run.tests.get(tid)) }}</figcaption></figure>{% endfor %}
 </div>
-{% else %}<p class="muted">No summary plots published. Fast-tier plots are published only for failed tests.</p>{% endif %}
+{% else %}<p class="muted">None published. Fast-tier plots are published only for failed tests.</p>{% endif %}
 
 <h2 id="all-runs">All runs</h2>
 <ul class="runlist">
