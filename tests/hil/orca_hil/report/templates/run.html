@@ -11,6 +11,11 @@
 {% for tid, doc in run.test_docs | dictsort %}
 <h2 id="{{ tid }}"><a href="../tests/{{ tid }}.html">{{ tid.upper() }}</a> {{ test_names.get(tid, "") }} {{ pill(doc.status) }}</h2>
 <p class="muted">{{ doc.duration_s | value }} s{% if doc.fixture_suspect %} · fixture suspect{% endif %}{% if doc.has_reduced %} · <a href="{{ run.run_id }}/{{ tid }}/reduced.zarr.zip">reduced.zarr.zip</a>{% endif %}</p>
+{% if "summary.png" in doc.plots %}
+<figure class="summary"><img src="{{ run.run_id }}/{{ tid }}/summary.png" alt="{{ tid.upper() }} summary" loading="lazy"></figure>
+{% endif %}
+{% set flagged = doc.metrics | selectattr("status", "in", ["fail", "inconclusive"]) | list %}
+<details class="metrics-box"{% if flagged %} open{% endif %}><summary>Metrics ({{ doc.metrics | length }}{% if flagged %}, {{ flagged | length }} flagged{% endif %})</summary>
 <div class="scroll">
 <table class="metrics">
   <thead><tr><th>Metric</th><th>Case</th><th>Value</th><th>Units</th><th>Kind</th><th>Bound</th><th>Baseline</th><th>Status</th><th>Note</th></tr></thead>
@@ -21,9 +26,11 @@
   </tbody>
 </table>
 </div>
-{% if doc.plots %}
+</details>
+{% set extra = doc.plots | reject("equalto", "summary.png") | list %}
+{% if extra %}
 <div class="plots" style="margin-top: 1rem">
-{% for p in doc.plots %}<figure><img src="{{ run.run_id }}/{{ tid }}/{{ p }}" alt="{{ tid.upper() }} {{ p }}" loading="lazy"><figcaption>{{ p }}</figcaption></figure>{% endfor %}
+{% for p in extra %}<figure><img src="{{ run.run_id }}/{{ tid }}/{{ p }}" alt="{{ tid.upper() }} {{ p }}" loading="lazy"><figcaption>{{ p }}</figcaption></figure>{% endfor %}
 </div>
 {% endif %}
 {% endfor %}

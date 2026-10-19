@@ -98,3 +98,5 @@ summary { cursor: pointer; color: var(--accent); }
 pre { background: var(--surface); border: 1px solid var(--line); border-radius: 4px; padding: 0.75rem; overflow-x: auto; }
 footer { margin-top: 3rem; font-size: 0.8rem; color: var(--muted); }
 .legend span.text::before { display: none; }
+figure.summary { max-width: 52rem; margin-bottom: 0.5rem; }
+details.metrics-box { margin-top: 0.5rem; }
