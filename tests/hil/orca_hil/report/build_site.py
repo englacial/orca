@@ -80,6 +80,9 @@ def load_runs(results):
             doc["plots"] = sorted(p.name for p in mpath.parent.glob("*.png"))
             doc["has_reduced"] = (mpath.parent / "reduced.zarr.zip").exists()
             run["test_docs"][mpath.parent.name] = doc
+        # run.yaml holds the pytest outcome; a passing test with inconclusive metrics is shown as such
+        run["tests"] = {tid: "inconclusive" if s == "pass" and run["test_docs"].get(tid, {}).get("status") == "inconclusive"
+                        else s for tid, s in (run.get("tests") or {}).items()}
         runs.append(run)
     return runs
 
