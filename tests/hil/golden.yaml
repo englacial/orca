@@ -1,0 +1,342 @@
+tag: golden-b206mini_pi5_loopback_50m-20261020
+repo: englacial/orca-hil-testing-results
+fixture_id: b206mini_pi5_loopback_50m
+created_utc: '2026-10-20T01:28:24Z'
+assets:
+  t01.tar:
+    sha256: bfcb0d37aed5e5f2e1602f65e2cf4878083538d405bd09e3a18289a2a7e349f7
+    bytes: 33617920
+  t02.tar:
+    sha256: a1a373ff3c29c6552641f1569b975f6d95237a91660489cd276a6d29053fe4d8
+    bytes: 33628160
+  t03.tar:
+    sha256: 574e601360ba8d312b9c38571c26361c6f59b51e5a0ff2fe2d9b15ebcda8ba74
+    bytes: 33617920
+  t04.tar:
+    sha256: 78612690a2dfafedd069f9142f9dcc0f614b4c2c26f6f8ab94b5447c2413ac22
+    bytes: 44830720
+  t05.tar:
+    sha256: 2e0eecfc4ef6b866f25d181496859faa269c9d11eb510a56957a4f3be5cf6c95
+    bytes: 143411200
+  t11.tar:
+    sha256: 7d38cf2532afe2030babd3e4259693bc70a84b0fd4bd1c4a9a5b92e4a93fbab1
+    bytes: 113152000
+  t10.tar:
+    sha256: 3d2bbd486eff8453ec30c65751e2b9684f919ee9611f071a066a4fc6e564299e
+    bytes: 89671680
+assets_by_test:
+  t01: t01.tar
+  t02: t02.tar
+  t03: t03.tar
+  t04: t04.tar
+  t05: t05.tar
+  t11: t11.tar
+  t10: t10.tar
+captures:
+  t01:
+    a_profile:
+      CHIRP:
+        num_pulses: 3000
+  t02:
+    hamming:
+      GENERATE:
+        window: hamming
+      CHIRP:
+        num_pulses: 3000
+  t03:
+    rx_only:
+      RF0:
+        transmit: false
+      CHIRP:
+        num_pulses: 3000
+  t04:
+    a:
+      GENERATE:
+        lo_offset_sw: 0.0
+      CHIRP:
+        phase_dithering: false
+        num_pulses: 2000
+    b:
+      GENERATE:
+        lo_offset_sw: 0.0
+      CHIRP:
+        phase_dithering: true
+        num_pulses: 2000
+  t05:
+    default:
+      GENERATE:
+        lo_offset_sw: 0.0
+      CHIRP:
+        phase_dithering: false
+        num_pulses: 2000
+        num_presums: 1
+        rx_duration: 4e-05
+    lo_offset:
+      GENERATE:
+        lo_offset_sw: 12500000.0
+      CHIRP:
+        phase_dithering: false
+        num_pulses: 2000
+        num_presums: 1
+        rx_duration: 4e-05
+    dither:
+      GENERATE:
+        lo_offset_sw: 0.0
+      CHIRP:
+        phase_dithering: true
+        num_pulses: 2000
+        num_presums: 1
+        rx_duration: 4e-05
+    lo_offset_dither:
+      GENERATE:
+        lo_offset_sw: 12500000.0
+      CHIRP:
+        phase_dithering: true
+        num_pulses: 2000
+        num_presums: 1
+        rx_duration: 4e-05
+  t11:
+    p1:
+      CHIRP:
+        num_pulses: 10000
+        num_presums: 1
+    p100:
+      CHIRP:
+        num_pulses: 10000
+        num_presums: 100
+  t10:
+    errors:
+      CHIRP:
+        rx_duration: 0.0001
+        num_presums: 10
+        phase_dithering: true
+        num_pulses: 20000
+        pulse_rep_int: 0.00011764705882352942
+t10_duty: 0.85
+t10_probes:
+- - 0.85
+  - 0.020663989814905494
+fixture:
+  fixture_id: b206mini_pi5_loopback_50m
+  description: B206mini-i loopback, 30 dB pad at TX, 50 m coax
+  hardware:
+    sdr_model: B206mini-i
+    sdr_serial: 36B5C60
+    attenuator_db: 30
+    cable:
+      type: LMR-100
+      length_m: 50.0
+      velocity_factor: 0.66
+    adapters: []
+  host:
+    model: Raspberry Pi 5
+    data_root: /mnt/nvme/orca-hil
+    results_repo: ~/orca-hil-testing-results
+  uhd:
+    source_dir: ~/uhd
+    install_prefix: ~/uhd-patched
+    expected_commit: c87abfbe8fb96cd1dc9e5d10fcf50d792b60c452
+    fpga_image: usrp_b205mini_fpga.bin
+    env:
+      UHD_IMAGES_DIR: ~/uhd-patched/share/uhd/images
+  storage:
+    kept_raw_quota_gb: 100
+    run_retention_days: 60
+  safety:
+    tx_gain_max: 89.8
+    rx_clip_fraction_max: 0.9
+    attenuator_check:
+      tx_gain: 15.0
+      expected_peak_dbfs: -72.1
+      tolerance_db: 6
+  rf_base:
+    freq: 330000000.0
+    tx_gain: 35.0
+    rx_gain: 40.0
+  calibration:
+    tx_power_table: null
+    path_loss_db: null
+params:
+  t03:
+    baseline_lines:
+    - freq: 5988281.250000001
+      level_db: 10.319331169128418
+    loopback_index: 173.2681671588837
+  t04:
+    baseline_spurs:
+    - freq: -25992968.750000004
+      level_db: 14.659295970406523
+    - freq: -19997395.83333334
+      level_db: 12.736581549396762
+    - freq: -18005859.375000004
+      level_db: 19.546683402578516
+    - freq: -9994140.625000002
+      level_db: 48.9660172159413
+    - freq: -6001953.125000001
+      level_db: 20.666717172773115
+    - freq: 6001953.125000001
+      level_db: 49.349896047432324
+    - freq: 10007812.500000002
+      level_db: 18.83577791777889
+  t05:
+    plateau_case: default
+    dither_pair:
+    - default
+    - dither
+    fit_min_n: 10
+tolerances: {}
+expected:
+  t01:
+  - name: leakage_peak_index
+    case: null
+    value: 159.04735809450727
+  - name: peak_separation_samples
+    case: null
+    value: 14.218871716702836
+  - name: loopback_peak_power_dbfs
+    case: null
+    value: -51.777835007517716
+  - name: loopback_to_leakage_ratio_db
+    case: null
+    value: 13.817919557493653
+  - name: single_pulse_snr_db
+    case: null
+    value: 26.522885611485343
+  - name: mainlobe_3db_width_samples
+    case: null
+    value: 4.867451839807757
+  - name: model_residual_ratio_db
+    case: null
+    value: -36.74898994431116
+  - name: noise_floor_dbfs
+    case: null
+    value: -78.32548719979
+  - name: raw_max_abs_fs
+    case: null
+    value: 0.00917425099760294
+  t02:
+  - name: pslr_minus_ideal_db
+    case: hamming
+    value: 2.2266707731264006
+  - name: islr_minus_ideal_db
+    case: hamming
+    value: 7.515877899662627
+  - name: mainlobe_width_ratio
+    case: hamming
+    value: 1.0064971860767091
+  - name: sidelobe_extent_minus_ideal_samples
+    case: hamming
+    value: 0.125
+  - name: first_echo_db
+    case: hamming
+    value: -53.69449760569345
+  t03:
+  - name: noise_power_dbfs
+    case: null
+    value: -54.63851580175338
+  - name: kurtosis_i
+    case: null
+    value: 3.0474963858139943
+  - name: kurtosis_q
+    case: null
+    value: 3.0479694919432903
+  - name: impulse_fraction_6sigma
+    case: null
+    value: 0.0
+  - name: new_narrowband_lines
+    case: null
+    value: 0
+  - name: narrowband_max_line_db
+    case: null
+    value: 10.336027145385742
+  - name: tx_isolation_margin_db
+    case: null
+    value: -11.256502624847077
+  - name: noise_at_nmax_dbfs
+    case: null
+    value: -113.58880380286293
+  t04:
+  - name: lo_leakage_rel_chirp_db
+    case: a
+    value: -44.87755976284059
+  - name: spur_freqs_match
+    case: a
+    value: true
+  - name: new_spurs_above_baseline
+    case: a
+    value: 0
+  - name: post_chirp_dc_rel_chirp_db
+    case: a
+    value: -45.038422719438486
+  - name: post_chirp_dc_rel_chirp_db
+    case: b
+    value: -42.106516595433874
+  - name: lo_leakage_suppression_by_dither_db
+    case: null
+    value: 3.2444948393805078
+  t05:
+  - name: plateau_level_dbfs
+    case: default
+    value: -94.05062866210938
+  - name: plateau_onset_n
+    case: default
+    value: 30.0
+  - name: dc_chirp_slope_db_per_decade
+    case: dither
+    value: -9.755280607612052
+  - name: dc_chirp_deviation_from_theory_at_nmax_db
+    case: dither
+    value: 0.6409991143546563
+  - name: signal_peak_loss_at_nmax_db
+    case: dither
+    value: 0.0003655669085347313
+  - name: slope_db_per_decade
+    case: lo_offset_dither
+    value: -10.324501631659764
+  - name: deviation_from_theory_at_nmax_db
+    case: lo_offset_dither
+    value: -0.817779266993
+  - name: signal_peak_loss_at_nmax_db
+    case: lo_offset_dither
+    value: 0.000775899214474407
+  - name: dither_gain_at_nmax_db
+    case: null
+    value: 16.693222045898438
+  t10:
+  - name: error_rate
+    case: null
+    value: 0.01821216435128369
+  - name: records_times_presums_equals_requested
+    case: null
+    value: true
+  - name: error_file_type_is_not_included
+    case: null
+    value: true
+  - name: time_offset_increases_logged
+    case: null
+    value: true
+  - name: max_gap_phase_jump_sigma
+    case: null
+    value: 2.8511283335637616
+  - name: record_power_drop_after_first_error_db
+    case: null
+    value: -0.022332877570837413
+  - name: stacked_power_change_after_errors_db
+    case: null
+    value: 0.003910168406848825
+  t11:
+  - name: peak_power_diff_db
+    case: null
+    value: 0.08130837761088827
+  - name: noise_power_diff_db
+    case: null
+    value: 0.7312724543374287
+  - name: p100_noise_vs_p1_single_db
+    case: null
+    value: -19.214887619284312
+  - name: profile_magnitude_correlation
+    case: null
+    value: 0.9999974715960703
+  - name: capture_gain_diff_db
+    case: null
+    value: 0.8122797726949003
