@@ -1,0 +1,630 @@
+fixture_id: b206mini_pi5_loopback_50m
+fast:
+  t03:
+    narrowband_lines:
+    - freq: 5988281.250000001
+      level_db: 10.319331169128418
+    impulse_fraction_6sigma:
+      mean: 0.0
+      std: 0.0
+      n: 5
+      runs:
+      - 20261009T171205Z_041a5d8_fast
+      - 20261009T171958Z_041a5d8_fast
+      - 20261009T172913Z_26053c0_fast
+      - 20261009T173708Z_26053c0_fast
+      - 20261009T174504Z_26053c0_fast
+    narrowband_max_line_db:
+      mean: 10.319331169128418
+      std: 0.026454276401473898
+      n: 5
+      runs:
+      - 20261009T171205Z_041a5d8_fast
+      - 20261009T171958Z_041a5d8_fast
+      - 20261009T172913Z_26053c0_fast
+      - 20261009T173708Z_26053c0_fast
+      - 20261009T174504Z_26053c0_fast
+    noise_at_nmax_dbfs:
+      mean: -118.75397485432578
+      std: 0.42433934486274044
+      n: 5
+      runs:
+      - 20261009T171205Z_041a5d8_fast
+      - 20261009T171958Z_041a5d8_fast
+      - 20261009T172913Z_26053c0_fast
+      - 20261009T173708Z_26053c0_fast
+      - 20261009T174504Z_26053c0_fast
+    noise_power_dbfs:
+      mean: -54.65213671245588
+      std: 0.012600713462100841
+      n: 5
+      runs:
+      - 20261009T171205Z_041a5d8_fast
+      - 20261009T171958Z_041a5d8_fast
+      - 20261009T172913Z_26053c0_fast
+      - 20261009T173708Z_26053c0_fast
+      - 20261009T174504Z_26053c0_fast
+  t04:
+    spurs:
+    - freq: -25992968.750000004
+      level_db: 14.659295970406523
+    - freq: -19997395.83333334
+      level_db: 12.736581549396762
+    - freq: -18005859.375000004
+      level_db: 19.546683402578516
+    - freq: -9994140.625000002
+      level_db: 48.9660172159413
+    - freq: -6001953.125000001
+      level_db: 20.666717172773115
+    - freq: 6001953.125000001
+      level_db: 49.349896047432324
+    - freq: 10007812.500000002
+      level_db: 18.83577791777889
+  t00:
+    attenuator_check_peak_dbfs:
+      mean: -72.38086446752543
+      std: 0.39496492817849793
+      n: 5
+      runs:
+      - 20261009T171205Z_041a5d8_fast
+      - 20261009T171958Z_041a5d8_fast
+      - 20261009T172913Z_26053c0_fast
+      - 20261009T173708Z_26053c0_fast
+      - 20261009T174504Z_26053c0_fast
+    soc_temp_after_warmup_c:
+      mean: 49.38
+      std: 0.4919349550499547
+      n: 5
+      runs:
+      - 20261009T171205Z_041a5d8_fast
+      - 20261009T171958Z_041a5d8_fast
+      - 20261009T172913Z_26053c0_fast
+      - 20261009T173708Z_26053c0_fast
+      - 20261009T174504Z_26053c0_fast
+  t01:
+    leakage_peak_index:
+      mean: 159.05022979963337
+      std: 0.00703054597626259
+      n: 5
+      runs:
+      - 20261009T171205Z_041a5d8_fast
+      - 20261009T171958Z_041a5d8_fast
+      - 20261009T172913Z_26053c0_fast
+      - 20261009T173708Z_26053c0_fast
+      - 20261009T174504Z_26053c0_fast
+    loopback_peak_power_dbfs:
+      mean: -52.13919714677091
+      std: 0.13358257021418743
+      n: 5
+      runs:
+      - 20261009T171205Z_041a5d8_fast
+      - 20261009T171958Z_041a5d8_fast
+      - 20261009T172913Z_26053c0_fast
+      - 20261009T173708Z_26053c0_fast
+      - 20261009T174504Z_26053c0_fast
+    model_residual_ratio_db:
+      mean: -38.77973234369077
+      std: 0.15677269448440428
+      n: 5
+      runs:
+      - 20261009T171205Z_041a5d8_fast
+      - 20261009T171958Z_041a5d8_fast
+      - 20261009T172913Z_26053c0_fast
+      - 20261009T173708Z_26053c0_fast
+      - 20261009T174504Z_26053c0_fast
+    noise_floor_dbfs:
+      mean: -78.574932111767
+      std: 0.09845620948237749
+      n: 5
+      runs:
+      - 20261009T171205Z_041a5d8_fast
+      - 20261009T171958Z_041a5d8_fast
+      - 20261009T172913Z_26053c0_fast
+      - 20261009T173708Z_26053c0_fast
+      - 20261009T174504Z_26053c0_fast
+    peak_separation_samples:
+      mean: 14.217937359250328
+      std: 0.007589664812998708
+      n: 5
+      runs:
+      - 20261009T171205Z_041a5d8_fast
+      - 20261009T171958Z_041a5d8_fast
+      - 20261009T172913Z_26053c0_fast
+      - 20261009T173708Z_26053c0_fast
+      - 20261009T174504Z_26053c0_fast
+    single_pulse_snr_db:
+      mean: 26.414298056112138
+      std: 0.09888493214627307
+      n: 5
+      runs:
+      - 20261009T171205Z_041a5d8_fast
+      - 20261009T171958Z_041a5d8_fast
+      - 20261009T172913Z_26053c0_fast
+      - 20261009T173708Z_26053c0_fast
+      - 20261009T174504Z_26053c0_fast
+  t02:
+    hamming/islr_minus_ideal_db:
+      mean: 4.770249611736216
+      std: 0.24692566763234364
+      n: 5
+      runs:
+      - 20261009T171205Z_041a5d8_fast
+      - 20261009T171958Z_041a5d8_fast
+      - 20261009T172913Z_26053c0_fast
+      - 20261009T173708Z_26053c0_fast
+      - 20261009T174504Z_26053c0_fast
+    rectangular/islr_minus_ideal_db:
+      mean: 0.1714397757979146
+      std: 0.049271023613172774
+      n: 5
+      runs:
+      - 20261009T171205Z_041a5d8_fast
+      - 20261009T171958Z_041a5d8_fast
+      - 20261009T172913Z_26053c0_fast
+      - 20261009T173708Z_26053c0_fast
+      - 20261009T174504Z_26053c0_fast
+  t05:
+    dither/dc_chirp_deviation_from_theory_at_nmax_db:
+      mean: 5.042706298828125
+      std: 0.3693693022334024
+      n: 5
+      runs:
+      - 20261009T171205Z_041a5d8_fast
+      - 20261009T171958Z_041a5d8_fast
+      - 20261009T172913Z_26053c0_fast
+      - 20261009T173708Z_26053c0_fast
+      - 20261009T174504Z_26053c0_fast
+    dither/dc_chirp_slope_db_per_decade:
+      mean: -8.553069126617064
+      std: 0.10234875623077923
+      n: 5
+      runs:
+      - 20261009T171205Z_041a5d8_fast
+      - 20261009T171958Z_041a5d8_fast
+      - 20261009T172913Z_26053c0_fast
+      - 20261009T173708Z_26053c0_fast
+      - 20261009T174504Z_26053c0_fast
+    dither_gain_at_nmax_db:
+      mean: 19.264201354980468
+      std: 0.39912014297238396
+      n: 5
+      runs:
+      - 20261009T171205Z_041a5d8_fast
+      - 20261009T171958Z_041a5d8_fast
+      - 20261009T172913Z_26053c0_fast
+      - 20261009T173708Z_26053c0_fast
+      - 20261009T174504Z_26053c0_fast
+    default/plateau_level_dbfs:
+      mean: -94.12639007568359
+      std: 0.03337284121271675
+      n: 5
+      runs:
+      - 20261009T171205Z_041a5d8_fast
+      - 20261009T171958Z_041a5d8_fast
+      - 20261009T172913Z_26053c0_fast
+      - 20261009T173708Z_26053c0_fast
+      - 20261009T174504Z_26053c0_fast
+    default/plateau_onset_n:
+      mean: 30.0
+      std: 0.0
+      n: 5
+      runs:
+      - 20261009T171205Z_041a5d8_fast
+      - 20261009T171958Z_041a5d8_fast
+      - 20261009T172913Z_26053c0_fast
+      - 20261009T173708Z_26053c0_fast
+      - 20261009T174504Z_26053c0_fast
+  t08:
+    dbfs_at_base_gain:
+      mean: -52.02962084206659
+      std: 0.1793446392921499
+      n: 5
+      runs:
+      - 20261009T171205Z_041a5d8_fast
+      - 20261009T171958Z_041a5d8_fast
+      - 20261009T172913Z_26053c0_fast
+      - 20261009T173708Z_26053c0_fast
+      - 20261009T174504Z_26053c0_fast
+  t09:
+    error_rate_at_75pct:
+      mean: 0.006979076446702803
+      std: 0.0021771973567645737
+      n: 5
+      runs:
+      - 20261009T171205Z_041a5d8_fast
+      - 20261009T171958Z_041a5d8_fast
+      - 20261009T172913Z_26053c0_fast
+      - 20261009T173708Z_26053c0_fast
+      - 20261009T174504Z_26053c0_fast
+updated: '2026-10-20T01:24:23Z'
+git_sha: f4976b4b30a5dc9cd4d8504ae709d581159a2e20
+full:
+  t00:
+    attenuator_check_peak_dbfs:
+      mean: -72.57347014410358
+      std: 0.37419858188818306
+      n: 3
+      runs:
+      - 20261009T175259Z_26053c0_full
+      - 20261009T194114Z_c1922f1_full
+      - 20261009T213124Z_c1922f1_full
+    soc_temp_after_warmup_c:
+      mean: 48.5
+      std: 0.5499999999999972
+      n: 3
+      runs:
+      - 20261009T175259Z_26053c0_full
+      - 20261009T194114Z_c1922f1_full
+      - 20261009T213124Z_c1922f1_full
+  t01:
+    leakage_peak_index:
+      mean: 159.05358706130124
+      std: 0.0048615292125412995
+      n: 3
+      runs:
+      - 20261009T175259Z_26053c0_full
+      - 20261009T194114Z_c1922f1_full
+      - 20261009T213124Z_c1922f1_full
+    loopback_peak_power_dbfs:
+      mean: -52.22766667405116
+      std: 0.4604419712145111
+      n: 3
+      runs:
+      - 20261009T175259Z_26053c0_full
+      - 20261009T194114Z_c1922f1_full
+      - 20261009T213124Z_c1922f1_full
+    model_residual_ratio_db:
+      mean: -38.75267476288352
+      std: 0.1327423123337504
+      n: 3
+      runs:
+      - 20261009T175259Z_26053c0_full
+      - 20261009T194114Z_c1922f1_full
+      - 20261009T213124Z_c1922f1_full
+    noise_floor_dbfs:
+      mean: -78.64124000727341
+      std: 0.4680341700173971
+      n: 3
+      runs:
+      - 20261009T175259Z_26053c0_full
+      - 20261009T194114Z_c1922f1_full
+      - 20261009T213124Z_c1922f1_full
+    peak_separation_samples:
+      mean: 14.215282648960539
+      std: 0.004839407563555175
+      n: 3
+      runs:
+      - 20261009T175259Z_26053c0_full
+      - 20261009T194114Z_c1922f1_full
+      - 20261009T213124Z_c1922f1_full
+    single_pulse_snr_db:
+      mean: 26.391469130154263
+      std: 0.04453017821767166
+      n: 3
+      runs:
+      - 20261009T175259Z_26053c0_full
+      - 20261009T194114Z_c1922f1_full
+      - 20261009T213124Z_c1922f1_full
+  t02:
+    blackman/floor_limited_islr_db:
+      mean: -44.475649094643025
+      std: 0.7622263665535264
+      n: 3
+      runs:
+      - 20261009T175259Z_26053c0_full
+      - 20261009T194114Z_c1922f1_full
+      - 20261009T213124Z_c1922f1_full
+    kaiser10/floor_limited_islr_db:
+      mean: -44.56629709386502
+      std: 0.43580968652882085
+      n: 3
+      runs:
+      - 20261009T175259Z_26053c0_full
+      - 20261009T194114Z_c1922f1_full
+      - 20261009T213124Z_c1922f1_full
+    kaiser14/floor_limited_islr_db:
+      mean: -45.19094171422373
+      std: 0.4833502221276917
+      n: 3
+      runs:
+      - 20261009T175259Z_26053c0_full
+      - 20261009T194114Z_c1922f1_full
+      - 20261009T213124Z_c1922f1_full
+    kaiser18/floor_limited_islr_db:
+      mean: -44.88355931586659
+      std: 1.1075939352422661
+      n: 3
+      runs:
+      - 20261009T175259Z_26053c0_full
+      - 20261009T194114Z_c1922f1_full
+      - 20261009T213124Z_c1922f1_full
+    blackman/floor_limited_pslr_db:
+      mean: -54.06432857004415
+      std: 3.2932835868036605
+      n: 3
+      runs:
+      - 20261009T175259Z_26053c0_full
+      - 20261009T194114Z_c1922f1_full
+      - 20261009T213124Z_c1922f1_full
+    kaiser10/floor_limited_pslr_db:
+      mean: -56.77620505836942
+      std: 0.8854622705211408
+      n: 3
+      runs:
+      - 20261009T175259Z_26053c0_full
+      - 20261009T194114Z_c1922f1_full
+      - 20261009T213124Z_c1922f1_full
+    kaiser14/floor_limited_pslr_db:
+      mean: -56.404022084330656
+      std: 1.057020020601047
+      n: 3
+      runs:
+      - 20261009T175259Z_26053c0_full
+      - 20261009T194114Z_c1922f1_full
+      - 20261009T213124Z_c1922f1_full
+    kaiser18/floor_limited_pslr_db:
+      mean: -55.75437210234558
+      std: 1.0272325123495654
+      n: 3
+      runs:
+      - 20261009T175259Z_26053c0_full
+      - 20261009T194114Z_c1922f1_full
+      - 20261009T213124Z_c1922f1_full
+    hamming/islr_minus_ideal_db:
+      mean: 4.238346170138662
+      std: 0.3547506853399629
+      n: 3
+      runs:
+      - 20261009T175259Z_26053c0_full
+      - 20261009T194114Z_c1922f1_full
+      - 20261009T213124Z_c1922f1_full
+    rectangular/islr_minus_ideal_db:
+      mean: 0.23266900524348935
+      std: 0.1167516963160566
+      n: 3
+      runs:
+      - 20261009T175259Z_26053c0_full
+      - 20261009T194114Z_c1922f1_full
+      - 20261009T213124Z_c1922f1_full
+  t03:
+    impulse_fraction_6sigma:
+      mean: 3.095238095238094e-08
+      std: 1.649572197684641e-08
+      n: 3
+      runs:
+      - 20261009T175259Z_26053c0_full
+      - 20261009T194114Z_c1922f1_full
+      - 20261009T213124Z_c1922f1_full
+    narrowband_max_line_db:
+      mean: 10.313101450602213
+      std: 0.038818747603757545
+      n: 3
+      runs:
+      - 20261009T175259Z_26053c0_full
+      - 20261009T194114Z_c1922f1_full
+      - 20261009T213124Z_c1922f1_full
+    noise_at_nmax_dbfs:
+      mean: -128.8631219713807
+      std: 0.023662611138873715
+      n: 3
+      runs:
+      - 20261009T175259Z_26053c0_full
+      - 20261009T194114Z_c1922f1_full
+      - 20261009T213124Z_c1922f1_full
+    noise_power_dbfs:
+      mean: -54.66125290733174
+      std: 0.013458751235506673
+      n: 3
+      runs:
+      - 20261009T175259Z_26053c0_full
+      - 20261009T194114Z_c1922f1_full
+      - 20261009T213124Z_c1922f1_full
+    narrowband_lines:
+    - freq: 5988281.250000001
+      level_db: 10.313101450602213
+  t04:
+    spurs:
+    - freq: -25999348.95833334
+      level_db: 15.469675743924702
+    - freq: -19988281.250000004
+      level_db: 13.07956857540742
+    - freq: -17992187.500000004
+      level_db: 19.733625027529566
+    - freq: -9994140.625000002
+      level_db: 48.58565639218267
+    - freq: -5997395.833333335
+      level_db: 19.51666411327971
+    - freq: 6001953.125000001
+      level_db: 49.311887844818465
+    - freq: 10003255.208333336
+      level_db: 19.685510098302768
+  t05:
+    dither/dc_chirp_deviation_from_theory_at_nmax_db:
+      mean: 13.162798563639322
+      std: 0.5227488468886968
+      n: 3
+      runs:
+      - 20261009T175259Z_26053c0_full
+      - 20261009T194114Z_c1922f1_full
+      - 20261009T213124Z_c1922f1_full
+    dither_p10/dc_chirp_deviation_from_theory_at_nmax_db:
+      mean: 23.22948710123698
+      std: 0.48383716468411386
+      n: 3
+      runs:
+      - 20261009T175259Z_26053c0_full
+      - 20261009T194114Z_c1922f1_full
+      - 20261009T213124Z_c1922f1_full
+    dither/dc_chirp_slope_db_per_decade:
+      mean: -7.035963038952147
+      std: 0.1388768931329414
+      n: 3
+      runs:
+      - 20261009T175259Z_26053c0_full
+      - 20261009T194114Z_c1922f1_full
+      - 20261009T213124Z_c1922f1_full
+    dither_p10/dc_chirp_slope_db_per_decade:
+      mean: -4.073910847979868
+      std: 0.14108252469005408
+      n: 3
+      runs:
+      - 20261009T175259Z_26053c0_full
+      - 20261009T194114Z_c1922f1_full
+      - 20261009T213124Z_c1922f1_full
+    dither_gain_at_nmax_db:
+      mean: 21.10314432779948
+      std: 0.5803323776809532
+      n: 3
+      runs:
+      - 20261009T175259Z_26053c0_full
+      - 20261009T194114Z_c1922f1_full
+      - 20261009T213124Z_c1922f1_full
+    default/plateau_level_dbfs:
+      mean: -94.1350606282552
+      std: 0.026927177463928965
+      n: 3
+      runs:
+      - 20261009T175259Z_26053c0_full
+      - 20261009T194114Z_c1922f1_full
+      - 20261009T213124Z_c1922f1_full
+    default_p10/plateau_level_dbfs:
+      mean: -94.79463195800781
+      std: 0.4991682767631037
+      n: 3
+      runs:
+      - 20261009T175259Z_26053c0_full
+      - 20261009T194114Z_c1922f1_full
+      - 20261009T213124Z_c1922f1_full
+    default/plateau_onset_n:
+      mean: 30.0
+      std: 0.0
+      n: 3
+      runs:
+      - 20261009T175259Z_26053c0_full
+      - 20261009T194114Z_c1922f1_full
+      - 20261009T213124Z_c1922f1_full
+    default_p10/plateau_onset_n:
+      mean: 30.0
+      std: 0.0
+      n: 3
+      runs:
+      - 20261009T175259Z_26053c0_full
+      - 20261009T194114Z_c1922f1_full
+      - 20261009T213124Z_c1922f1_full
+  t06:
+    100s/spread_1sigma_db:
+      mean: 3.426303454446242e-06
+      std: 1.6331346664584282e-06
+      n: 3
+      runs:
+      - 20261009T175259Z_26053c0_full
+      - 20261009T194114Z_c1922f1_full
+      - 20261009T213124Z_c1922f1_full
+  t07:
+    residual_std_deg:
+      mean: 0.3429134327802343
+      std: 0.009160963237861006
+      n: 3
+      runs:
+      - 20261009T175259Z_26053c0_full
+      - 20261009T194114Z_c1922f1_full
+      - 20261009T213124Z_c1922f1_full
+  t08:
+    dbfs_at_base_gain:
+      mean: -52.05779003589751
+      std: 0.22368944822877462
+      n: 3
+      runs:
+      - 20261020T005246Z_f4976b4_full
+      - 20261020T010310Z_f4976b4-dirty_full
+      - 20261020T011334Z_f4976b4-dirty_full
+    dynamic_range_db:
+      mean: 74.34222838107011
+      std: 0.06459397664066845
+      n: 3
+      runs:
+      - 20261020T005246Z_f4976b4_full
+      - 20261020T010310Z_f4976b4-dirty_full
+      - 20261020T011334Z_f4976b4-dirty_full
+    p1db_tx_gain:
+      mean: 84.222123815837
+      std: 0.008963013049250446
+      n: 3
+      runs:
+      - 20261020T005246Z_f4976b4_full
+      - 20261020T010310Z_f4976b4-dirty_full
+      - 20261020T011334Z_f4976b4-dirty_full
+  t09:
+    max_duty_with_error_rate_below_2pct:
+      mean: 0.8000000000000002
+      std: 1.3597399555105182e-16
+      n: 3
+      runs:
+      - 20261009T175259Z_26053c0_full
+      - 20261009T194114Z_c1922f1_full
+      - 20261009T213124Z_c1922f1_full
+  t12:
+    150MHz/loopback_power_dbfs:
+      mean: -44.1608704630392
+      std: 0.30174378807654195
+      n: 3
+      runs:
+      - 20261009T175259Z_26053c0_full
+      - 20261009T194114Z_c1922f1_full
+      - 20261009T213124Z_c1922f1_full
+    250MHz/loopback_power_dbfs:
+      mean: -48.62709658504582
+      std: 0.1387998152747838
+      n: 3
+      runs:
+      - 20261009T175259Z_26053c0_full
+      - 20261009T194114Z_c1922f1_full
+      - 20261009T213124Z_c1922f1_full
+    350MHz/loopback_power_dbfs:
+      mean: -53.33295483158226
+      std: 0.5097236955810369
+      n: 3
+      runs:
+      - 20261009T175259Z_26053c0_full
+      - 20261009T194114Z_c1922f1_full
+      - 20261009T213124Z_c1922f1_full
+    450MHz/loopback_power_dbfs:
+      mean: -56.44598218966697
+      std: 0.16834303277925103
+      n: 3
+      runs:
+      - 20261009T175259Z_26053c0_full
+      - 20261009T194114Z_c1922f1_full
+      - 20261009T213124Z_c1922f1_full
+    600MHz/loopback_power_dbfs:
+      mean: -61.23362455196415
+      std: 0.38505053472536777
+      n: 3
+      runs:
+      - 20261009T175259Z_26053c0_full
+      - 20261009T194114Z_c1922f1_full
+      - 20261009T213124Z_c1922f1_full
+    750MHz/loopback_power_dbfs:
+      mean: -65.29413025991848
+      std: 0.4193459043818831
+      n: 3
+      runs:
+      - 20261009T175259Z_26053c0_full
+      - 20261009T194114Z_c1922f1_full
+      - 20261009T213124Z_c1922f1_full
+    900MHz/loopback_power_dbfs:
+      mean: -68.90594260962216
+      std: 0.14183831776932057
+      n: 3
+      runs:
+      - 20261009T175259Z_26053c0_full
+      - 20261009T194114Z_c1922f1_full
+      - 20261009T213124Z_c1922f1_full
+    ripple_db:
+      mean: 0.4639490344531083
+      std: 0.2917438110521697
+      n: 3
+      runs:
+      - 20261009T175259Z_26053c0_full
+      - 20261009T194114Z_c1922f1_full
+      - 20261009T213124Z_c1922f1_full
