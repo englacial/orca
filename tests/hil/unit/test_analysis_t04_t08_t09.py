@@ -30,6 +30,7 @@ def test_t04_leakage_spurs_and_occupancy(t04_captures, fixture_cfg):
     reduced, ms = analyze_spectral(t04_captures, fixture_cfg, {"baseline_spurs": baseline})
     m = by_name(ms)
     assert m[("lo_leakage_suppression_by_dither_db", None)].value > 20
+    assert m[("lo_leakage_dithered_rel_chirp_db", "b")].value < m[("lo_leakage_rel_chirp_db", "a")].value - 20
     assert m[("spur_freqs_match", "a")].value is True
     assert m[("new_spurs_above_baseline", "a")].value == 0
     # Spurs near the detection threshold may come and go without failing either check

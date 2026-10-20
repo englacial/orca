@@ -271,6 +271,9 @@ expected:
   - name: post_chirp_dc_rel_chirp_db
     case: b
     value: -42.106516595433874
+  - name: lo_leakage_dithered_rel_chirp_db
+    case: b
+    value: -50.41458946863457
   - name: lo_leakage_suppression_by_dither_db
     case: null
     value: 3.2444948393805078

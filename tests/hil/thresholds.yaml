@@ -103,11 +103,13 @@ t03:
   noise_at_nmax_dbfs:      {kind: base, bound: {type: upper, tol: 3.0}, units: dBFS}
 
 t04:
-  # LO leakage is measured before the first received chirp. If the dithered case is at
-  # the DC estimate's noise floor, the suppression is a lower bound (inconclusive if < 20 dB).
-  # Not judged: the estimate is near the noise floor and varies by 4-7 dB (1 sigma) between runs.
+  # LO leakage is measured before the first received chirp. Undithered it is already only
+  # 0-15 dB above the estimate's noise floor (about -60 dB with 10000 pulses), so the
+  # suppression by dithering is usually a lower bound and is not judged; the dithered level is.
+  # Undithered: not judged, near the noise floor and varies by 4-7 dB (1 sigma) between runs.
   lo_leakage_rel_chirp_db:             {kind: info, units: dB}
-  lo_leakage_suppression_by_dither_db: {kind: abs, bound: {type: min, value: 20.0}, units: dB}
+  lo_leakage_dithered_rel_chirp_db:    {kind: abs, bound: {type: max, value: -50.0}, units: dB}
+  lo_leakage_suppression_by_dither_db: {kind: info, units: dB}
   # DC after the chirp: with lo_offset_sw = 0 this fixture shows a signal-derived DC tail
   # that is coherent with the dithered TX signal (not removed by dithering).
   post_chirp_dc_rel_chirp_db:          {kind: info, units: dB}

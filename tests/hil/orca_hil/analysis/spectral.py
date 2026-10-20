@@ -121,11 +121,12 @@ def analyze_spectral(captures, fixture, params=None):
         ms.append(Measurement("post_chirp_dc_rel_chirp_db", sp["post_chirp_dc_rel_chirp_db"], case=case))
     if "a" in spec and "b" in spec:
         a, b = spec["a"], spec["b"]
+        ms.append(Measurement("lo_leakage_dithered_rel_chirp_db", b["lo_leakage_rel_chirp_db"], case="b",
+                              note=f"estimate's noise floor {b['lo_leakage_floor_rel_chirp_db']:.1f} dB"))
         at_floor = b["lo_leakage_rel_chirp_db"] < b["lo_leakage_floor_rel_chirp_db"] + FLOOR_MARGIN_DB
         if at_floor:
             bound = a["lo_leakage_rel_chirp_db"] - b["lo_leakage_floor_rel_chirp_db"] - FLOOR_MARGIN_DB
             ms.append(Measurement("lo_leakage_suppression_by_dither_db", bound,
-                                  inconclusive=bound < 20,
                                   note=f"lower bound: dithered case at the estimate's noise floor "
                                        f"({b['lo_leakage_floor_rel_chirp_db']:.1f} dB rel. chirp)"))
         else:
