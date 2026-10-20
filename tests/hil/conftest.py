@@ -31,6 +31,8 @@ def pytest_addoption(parser):
                 help="repeat the run --baseline-repeats times and rewrite the [base] baselines")
     g.addoption("--baseline-repeats", type=int, default=3)
     g.addoption("--replay", action="store_true", help="enable replay tests (needs golden data)")
+    g.addoption("--update-golden-expected", action="store_true",
+                help="with --replay: rewrite the expected metrics in golden.yaml")
     g.addoption("--publish", action="store_true", help="push results to the results repo")
     g.addoption("--publish-plots", action="store_true", help="with --publish: include fast-tier plots of passing tests")
     g.addoption("--keep-raw", action="store_true", help="keep raw captures even for passing tests")
@@ -62,9 +64,6 @@ def pytest_configure(config):
     config.addinivalue_line("markers", "full: full tier only")
     for tid in TEST_IDS:
         config.addinivalue_line("markers", f"{tid}: HIL test {tid.upper()}")
-
-    if config.getoption("--replay"):
-        raise pytest.UsageError("--replay is not implemented yet (HIL plan Phase 7)")
 
     config._hil = None
     if not config.getoption("--hil"):
@@ -108,8 +107,11 @@ def _test_id(item):
 def pytest_collection_modifyitems(config, items):
     hil = config.getoption("--hil")
     skip_hw = pytest.mark.skip(reason="hardware test: run with --hil")
+    skip_replay = pytest.mark.skip(reason="replay test: run with --replay")
     keep, deselected = [], []
     for item in items:
+        if item.get_closest_marker("replay") and not config.getoption("--replay"):
+            item.add_marker(skip_replay)
         if item.get_closest_marker("hardware"):
             if not hil:
                 item.add_marker(skip_hw)

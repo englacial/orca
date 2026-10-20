@@ -1,7 +1,8 @@
 name: HIL Replay
 
 # Software-only checks of the hardware-in-the-loop harness (tests/hil).
-# Unit tests run on simulated captures; replay of golden captures is added later.
+# Unit tests run on simulated captures; replay tests re-analyze the golden captures
+# (assets of the release named in tests/hil/golden.yaml).
 
 on:
   push:
@@ -27,3 +28,14 @@ jobs:
 
       - name: Run HIL Unit Tests
         run: conda run -n uhd bash -c "PYTHONPATH=. pytest tests/hil/unit"
+
+      - name: Restore Golden Captures
+        uses: actions/cache@v4
+        with:
+          path: ~/.cache/orca-hil-golden
+          key: hil-golden-${{ hashFiles('tests/hil/golden.yaml') }}
+
+      - name: Replay Golden Captures
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: conda run -n uhd bash -c "PYTHONPATH=. pytest tests/hil/replay --replay"

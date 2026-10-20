@@ -25,7 +25,7 @@ hardware-cxx-test:
 	@echo "Running C++ hardware tests.."
 	ctest --test-dir sdr/build --output-on-failure
 # Hardware-in-the-loop test harness (see tests/hil)
-.PHONY: hil-fast hil-full hil-unit hil-site hil-build-uhd
+.PHONY: hil-fast hil-full hil-unit hil-replay hil-golden hil-site hil-build-uhd
 hil-fast:
 	pytest tests/hil --ignore=tests/hil/unit --hil --tier fast $(HIL_ARGS)
 
@@ -34,6 +34,12 @@ hil-full:
 
 hil-unit:
 	pytest tests/hil/unit
+
+hil-replay:
+	pytest tests/hil/replay --replay
+
+hil-golden:
+	python -m tests.hil.orca_hil.golden make
 
 HIL_RESULTS ?= $(HOME)/orca-hil-testing-results
 HIL_SITE ?= /mnt/nvme/orca-hil/site
