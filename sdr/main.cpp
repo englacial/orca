@@ -166,21 +166,29 @@ void splitOutputFiles(Chirp& chirp, ofstream& outfile, string& current_filename,
  * @param transmit_thread Thread group for the transmit worker
  */
 void wrapUp(boost::asio::posix::stream_descriptor& gps_stream, ofstream& outfile, string& current_filename, boost::thread_group& transmit_thread) {
+  cout_mutex.lock();
   cout << "[RX] Closing output file." << endl;
+  cout_mutex.unlock();
   outfile.close();
+  cout_mutex.lock();
   cout << "[CLOSE FILE] " << current_filename << endl;
+  cout_mutex.unlock();
 
   gps_stream.close();
 
+  cout_mutex.lock();
   cout << "[RX] Error count: " << error_count << endl;
   cout << "[RX] Total pulses written: " << last_pulse_num_written << endl;
   cout << "[RX] Total pulses attempted: " << pulses_received << endl;
-  
+
   cout << "[RX] Done. Calling join_all() on transmit thread group." << endl;
+  cout_mutex.unlock();
 
   transmit_thread.join_all();
 
+  cout_mutex.lock();
   cout << "[RX] transmit_thread.join_all() complete." << endl << endl;
+  cout_mutex.unlock();
 }
 
 // TODO: This needs to be commented out otherwise the chirp to the spec analyzer won't transmit 
@@ -283,7 +291,9 @@ int UHD_SAFE_MAIN(int argc, char *argv[]) {
   } else {
     yaml_filename = "../../config/default.yaml";
   }
+  cout_mutex.lock();
   cout << "Reading from config file: " << yaml_filename << endl;
+  cout_mutex.unlock();
 
   Sdr sdr(yaml_filename);
   Chirp chirp(yaml_filename);
@@ -320,8 +330,9 @@ int UHD_SAFE_MAIN(int argc, char *argv[]) {
 
   /*** VERSION INFO ***/
 
+  cout_mutex.lock();
   // Note: This print statement is used by automated post-processing code. Please be careful about changing the format.
-  cout << "[VERSION] 0.0.1" << endl; // Version numbers: First number:  Increment for major new versions
+  cout << "[VERSION] 0.0.2" << endl; // Version numbers: First number:  Increment for major new versions
                                      //                  Second number: Increment for any changes that you expect to matter to post-processing
                                      //                  Third number:  Increment for any change
   // Human-readable notes -- explain notable behavior for humans
@@ -333,7 +344,7 @@ int UHD_SAFE_MAIN(int argc, char *argv[]) {
   
   cout << "INFO: Number of TX samples: " << num_tx_samps << endl;  //needs to be after chirp and sdr object are both made
   cout << "INFO: Number of RX samples: " << num_rx_samps << endl << endl;  //needs to be after chirp and sdr object are both made
-
+  cout_mutex.unlock();
  
   // update the offset time for start of streaming to be offset from the current usrp time
   chirp.setTimeOffset(chirp.getTimeOffset() + time_spec_t(sdr.getUsrp()->get_time_now()).get_real_secs());  //needs to be after chirp and sdr object are both made
@@ -343,7 +354,9 @@ int UHD_SAFE_MAIN(int argc, char *argv[]) {
   transmit_thread.create_thread(boost::bind(&transmit_worker, sdr.getTxStream(), sdr.getRxStream(), boost::ref(chirp), boost::ref(sdr)));
   
   if (!sdr.getTransmit()) {
+    cout_mutex.lock();
     cout << "WARNING: Transmit disabled by configuration file!" << endl;
+    cout_mutex.unlock();
   }
 
   //////////////////////////////////////////////////////////////////////////////////////////
@@ -365,7 +378,9 @@ int UHD_SAFE_MAIN(int argc, char *argv[]) {
   boost::asio::posix::stream_descriptor gps_stream{ioservice, gps_file};
   auto gps_asio_handler = [](const boost::system::error_code& ec, std::size_t) {
     if (ec.value() != 0) {
+      cout_mutex.lock();
       cout << "GPS write error: " << ec.message() << endl;
+      cout_mutex.unlock();
     }
   };
 
@@ -383,18 +398,24 @@ int UHD_SAFE_MAIN(int argc, char *argv[]) {
   }
 
   // Note: This print statement is used by automated post-processing code. Please be careful about changing the format.
+  cout_mutex.lock();
   cout << "[OPEN FILE] " << current_filename << endl;
+  cout_mutex.unlock();
   outfile.open(current_filename, ofstream::binary);
 
   /*** RX LOOP AND SUM ***/
   if (chirp.getNumPulses() < 0) {
+    cout_mutex.lock();
     cout << "num_pulses is < 0. Will continue to send chirps until stopped with Ctrl-C." << endl;
+    cout_mutex.unlock();
   }
 
   string gps_data;
 
   if (sdr.getCpuFormat() != "fc32") {
+    cout_mutex.lock();
     cout << "Only cpu_format 'fc32' is supported for now." << endl;
+    cout_mutex.unlock();
     // This is because we actually need buff and sample_sum to have the correct
     // data type to facilitate phase modulation and summing. In the future, this could be
     // fixed up so that it can work with any supported cpu_format, but it
@@ -417,7 +438,9 @@ int UHD_SAFE_MAIN(int argc, char *argv[]) {
   float inversion_phase; // Store phase to use for phase inversion of this chirp
   
   //Creating GPS log & vars
+  cout_mutex.lock();
   printf("Starting GPS code...\n");
+  cout_mutex.unlock();
   using namespace boost::asio;
 
   io_context io;
@@ -426,15 +449,21 @@ int UHD_SAFE_MAIN(int argc, char *argv[]) {
 
   // TODO: Consider using a library for working with GPS;
   try {
+    cout_mutex.lock();
     printf("Opening serial port...\n");
+    cout_mutex.unlock();
     serial.open("/dev/ttyACM0");  // Adjust if needed for your system
   } catch (boost::system::system_error err) {
+    cout_mutex.lock();
     printf("Failed to open GPS.\n");
+    cout_mutex.unlock();
     using_gps = false;
   }
 
   if (using_gps) {
+    cout_mutex.lock();
     printf("Serial port opened.\n");
+    cout_mutex.unlock();
     serial.set_option(serial_port_base::baud_rate(115200));
     serial.set_option(serial_port_base::character_size(8));
     serial.set_option(serial_port_base::parity(serial_port_base::parity::none));
@@ -452,7 +481,9 @@ int UHD_SAFE_MAIN(int argc, char *argv[]) {
   char c; 
 
   // Note: This print statement is used by automated post-processing code. Please be careful about changing the format.
+  cout_mutex.lock();
   cout << "[START] Beginning main loop" << endl;
+  cout_mutex.unlock();
 
   while ((chirp.getNumPulses() < 0) || (last_pulse_num_written < chirp.getNumPulses())) {
 
@@ -510,10 +541,12 @@ int UHD_SAFE_MAIN(int argc, char *argv[]) {
                   }
                   
                   // FOR READABILITY ONLY!!! Remove for actual use
+                  cout_mutex.lock();
                   std::cout << std::fixed << std::setprecision(9)
                           << "t=" << now_us << " s, "
                           << "Lat: " << latitude << ", Lon: " << longitude
                           << ", Alt: " << altitude << " m\n";
+                  cout_mutex.unlock();
               }
 
               line.clear();
@@ -571,18 +604,22 @@ void transmit_worker(tx_streamer::sptr& tx_stream, rx_streamer::sptr& rx_stream,
 
   if (!infile.is_open())
   {
+    cout_mutex.lock();
     cout << endl
          << "!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!" << endl;
     cout << "ERROR! Failed to open chirp.bin input file" << endl;
     cout << "!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!" << endl
          << endl;
+    cout_mutex.unlock();
     exit(1);
   }
 
   // Transmit buffers
 
   if (sdr.getCpuFormat() != "fc32") {
+    cout_mutex.lock();
     cout << "Only cpu_format 'fc32' is supported for now." << endl;
+    cout_mutex.unlock();
     // This is because we actually need chirp_unmodulated to have the correct
     // data type to facilitate phase modulation. In the future, this could be
     // fixed up so that it can work with any supported cpu_format, but it
@@ -635,7 +672,9 @@ void transmit_worker(tx_streamer::sptr& tx_stream, rx_streamer::sptr& rx_stream,
     */
     while ((pulses_scheduled - 6) > pulses_received) { // TODO: hardcoded
       if (stop_signal_called) {
+        cout_mutex.lock();
         cout << "[TX] stop signal called while scheduler thread waiting -> break" << endl;
+        cout_mutex.unlock();
         break;
       }
       boost::this_thread::sleep_for(boost::chrono::nanoseconds(10));
@@ -674,7 +713,9 @@ void transmit_worker(tx_streamer::sptr& tx_stream, rx_streamer::sptr& rx_stream,
     pulses_scheduled++;
 
     if (stop_signal_called) {
+      cout_mutex.lock();
       cout << "[TX] stop signal called -> break" << endl;
+      cout_mutex.unlock();
       break;
     }
 
@@ -688,8 +729,12 @@ void transmit_worker(tx_streamer::sptr& tx_stream, rx_streamer::sptr& rx_stream,
   }
   tx_done = true;
 
+  cout_mutex.lock();
   cout << "[TX] Closing file" << endl;
+  cout_mutex.unlock();
   infile.close();
+  cout_mutex.lock();
   cout << "[TX] Done." << endl;
+  cout_mutex.unlock();
 
 }
