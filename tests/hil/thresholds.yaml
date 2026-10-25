@@ -140,7 +140,8 @@ t05:
 t06:  # power_loss_db per integration time (case), relative to single pulses
   errors_in_captures: {kind: info, units: count}
   power_loss_db:      {kind: abs, bound: {type: max, value: 0.2}, units: dB}
-  spread_1sigma_db:   {kind: base, bound: {type: ratio_upper, factor: 1.5}, units: dB}
+  # A few micro-dB; minutes-long phase-noise episodes have raised it to 2.7x the baseline mean
+  spread_1sigma_db:   {kind: base, bound: {type: ratio_upper, factor: 5.0}, units: dB}
 
 t07:
   errors_in_captures:        {kind: info, units: count}
