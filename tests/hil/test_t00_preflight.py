@@ -19,6 +19,9 @@ PARAMS = {
 ATTEN_CHECK_PULSES = 2000
 CXX_HW_TESTS = "detectChannels|setRFParams|refLoLockDetect"
 USB_ERROR_RE = re.compile(r"usb.*(error|fail|over-current|unable|reset|disconnect)", re.I)
+# A B2xx disconnects once while UHD loads its firmware, then re-enumerates as an Ettus device
+ETTUS_ENUM_RE = re.compile(r"New USB device found, idVendor=2500\b")
+FIRMWARE_REENUM_S = 10
 
 
 def uhd_checks(fixture):
@@ -58,9 +61,13 @@ def device_checks(fixture):
 
 
 def usb_kernel_errors():
-    out = subprocess.run(["journalctl", "-k", "--since", "-1h", "--no-pager", "-q"],
+    """USB error lines in the last hour's kernel log, except firmware-load disconnects."""
+    out = subprocess.run(["journalctl", "-k", "--since", "-1h", "--no-pager", "-q", "-o", "short-unix"],
                          capture_output=True, text=True).stdout
-    return [ln for ln in out.splitlines() if USB_ERROR_RE.search(ln)]
+    lines = [(float(ln.split(maxsplit=1)[0]), ln) for ln in out.splitlines() if ln[:1].isdigit()]
+    enums = [t for t, ln in lines if ETTUS_ENUM_RE.search(ln)]
+    return [ln for t, ln in lines if USB_ERROR_RE.search(ln)
+            and not ("disconnect" in ln and any(0 <= e - t <= FIRMWARE_REENUM_S for e in enums))]
 
 
 def run_cxx_hw_tests(fixture):
