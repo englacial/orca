@@ -60,7 +60,9 @@ GPIO:
     pwr_amp_pin: "-1"                    # Which GPIO pin to use for external
                                          #   power amplifier control
                                          #   (set to -1 if not using)
-    ref_out: -1                          # Turns the 10 MHz reference out signal
+    pwr_amp_active_low: false            # Drive the amp pin low (instead of
+                                         #   high) while transmitting
+    ref_out: -1                        # Turns the 10 MHz reference out signal
                                          #   on (1) or off (0)
                                          #   set to (-1) if SDR does not support
 ### RF FRONTEND 0 CONFIGURATION

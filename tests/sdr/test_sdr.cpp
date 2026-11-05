@@ -37,7 +37,7 @@ TEST(loadConfigFromYaml, LoadsDefault){
     EXPECT_EQ(sdr.getOtwFormat(), "sc12");
 
     //GPIO
-    EXPECT_EQ(sdr.getPwrAmpPin(), -3);
+    EXPECT_EQ(sdr.getPwrAmpPin(), -1);
     EXPECT_EQ(sdr.getGpioBank(), "FP0");
     EXPECT_EQ(sdr.getRefOutInt(), -1);
 
@@ -63,10 +63,11 @@ TEST(GetterMethods, UntestedInLoadsDefault){
     const string kYamlFile = string(CONFIG_DIR) + "/default.yaml";
     Sdr sdr(kYamlFile);
 
-    EXPECT_EQ(sdr.getAmpGpioMask(), 536870912); // 536870912 in 32-bit binary is 00100000000000000000000000000000
-    EXPECT_EQ(sdr.getAtrMasks(), 536870912);
-    EXPECT_EQ(sdr.getAtrControl(), 536870912);
-    EXPECT_EQ(sdr.getGpioDdr(), 536870912);
+    // default.yaml has pwr_amp_pin -1 (not using an amp pin)
+    EXPECT_EQ(sdr.getAmpGpioMask(), 0);
+    EXPECT_EQ(sdr.getAtrMasks(), 0);
+    EXPECT_EQ(sdr.getAtrControl(), 0);
+    EXPECT_EQ(sdr.getGpioDdr(), 0);
 }
 
 
@@ -248,5 +249,5 @@ TEST(setupGpio, checkParams){
     test.revealSetRFParams(sdr);
     test.revealRefLoLockDetect(sdr);
     test.revealSetupGpio(sdr);
-    EXPECT_NE(sdr.getPwrAmpPin(), -1);
+    EXPECT_EQ(sdr.getPwrAmpPin(), -1);
 }

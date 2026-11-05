@@ -39,13 +39,17 @@ void Sdr::loadConfigFromYaml(const string& kYamlFile) {
   YAML::Node gpio_params = config["GPIO"];
   gpio_bank = gpio_params["gpio_bank"].as<string>();
   pwr_amp_pin = gpio_params["pwr_amp_pin"].as<int>();
-  pwr_amp_pin -= 2; // map the specified DB15 pin to the GPIO pin numbering
-  if (pwr_amp_pin != -1) {
+  pwr_amp_active_low = gpio_params["pwr_amp_active_low"].as<bool>(false);
+  if (pwr_amp_pin >= 2) {
+    pwr_amp_pin -= 2; // map the specified DB15 pin to the GPIO pin numbering
     AMP_GPIO_MASK = (1 << pwr_amp_pin);
-    ATR_MASKS = (AMP_GPIO_MASK);
-    ATR_CONTROL = (AMP_GPIO_MASK);
-    GPIO_DDR = (AMP_GPIO_MASK);
+  } else {
+    pwr_amp_pin = -1; // not using an amp pin
+    AMP_GPIO_MASK = 0;
   }
+  ATR_MASKS = (AMP_GPIO_MASK);
+  ATR_CONTROL = (AMP_GPIO_MASK);
+  GPIO_DDR = (AMP_GPIO_MASK);
 
   ref_out_int = gpio_params["ref_out"].as<int>();
 
@@ -98,6 +102,9 @@ void Sdr::createUsrp(){
   usrp = uhd::usrp::multi_usrp::make(device_args);
   cout << boost::format("TX/RX Device: %s") % usrp->get_pp_string() << endl;
 
+  // Set up GPIO first: until then the amp pin can sit at its "on" level
+  setupGpio();
+
   // Lock mboard clocks
   usrp->set_clock_source(clk_ref);
   usrp->set_time_source(clk_ref);
@@ -108,7 +115,7 @@ void Sdr::createUsrp(){
 *
 * Initializes the USRP device with the specified parameters, sets the subdevice
 * specifications, master clock rate, and configures the RF parameters. checks
-* reference and LO locks, and initializes GPIO, transmit, and receive settings.
+* reference and LO locks, and initializes transmit and receive settings.
 *
 */
 void Sdr::setupUsrp(){
@@ -133,7 +140,6 @@ void Sdr::setupUsrp(){
   detectChannels();
   setRFParams();
   refLoLockDetect();
-  setupGpio();
   setupTx();
   setupRx();
 }
@@ -345,14 +351,17 @@ void Sdr::setupGpio(){
 
   // basic ATR setup
   if (pwr_amp_pin != -1) {
+    // set amp output pin as desired (on only when TX); levels are written
+    // before enabling the output so the pin never glitches to the "on" level
+    uint32_t amp_on = pwr_amp_active_low ? 0 : AMP_GPIO_MASK;
+    uint32_t amp_off = pwr_amp_active_low ? AMP_GPIO_MASK : 0;
+    usrp->set_gpio_attr(gpio_bank, "ATR_0X", amp_off, AMP_GPIO_MASK);
+    usrp->set_gpio_attr(gpio_bank, "ATR_RX", amp_off, AMP_GPIO_MASK);
+    usrp->set_gpio_attr(gpio_bank, "ATR_TX", amp_off, AMP_GPIO_MASK);
+    usrp->set_gpio_attr(gpio_bank, "ATR_XX", amp_on, AMP_GPIO_MASK);
+
     usrp->set_gpio_attr(gpio_bank, "CTRL", ATR_CONTROL, ATR_MASKS);
     usrp->set_gpio_attr(gpio_bank, "DDR", GPIO_DDR, ATR_MASKS);
-
-    // set amp output pin as desired (on only when TX)
-    usrp->set_gpio_attr(gpio_bank, "ATR_0X", 0, AMP_GPIO_MASK);
-    usrp->set_gpio_attr(gpio_bank, "ATR_RX", 0, AMP_GPIO_MASK);
-    usrp->set_gpio_attr(gpio_bank, "ATR_TX", 0, AMP_GPIO_MASK);
-    usrp->set_gpio_attr(gpio_bank, "ATR_XX", AMP_GPIO_MASK, AMP_GPIO_MASK);
   }
 
 //  cout << "AMP_GPIO_MASK: " << bitset<32>(AMP_GPIO_MASK) << endl;

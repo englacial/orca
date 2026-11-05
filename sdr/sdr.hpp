@@ -80,6 +80,7 @@ class Sdr {
 
     // GPIO
     int pwr_amp_pin;        // Which GPIO pin to use for external power amplifier control (set to -1 if not using)
+    bool pwr_amp_active_low; // Drive the amp pin low (instead of high) while transmitting
     string gpio_bank;       // Which GPIO bank to use (FP0 is front panel and default)
     uint32_t AMP_GPIO_MASK;
     uint32_t ATR_MASKS;
