@@ -13,20 +13,25 @@ from types import SimpleNamespace
 
 import pytest
 
-from tests.hil.orca_hil import HIL_DIR, REPO_ROOT, baseline_update, scratch, telemetry, yamlio
+from tests.hil.orca_hil import REPO_ROOT, baseline_update, fixtures, scratch, telemetry, yamlio
 from tests.hil.orca_hil.baselines import Baselines
 from tests.hil.orca_hil.metrics import MetricRecorder
 from tests.hil.orca_hil.thresholds import evaluate, load_thresholds
 
 TEST_IDS = [f"t{i:02d}" for i in range(13)]
 SUSPECT_IF_T03_FAILS = {"t04", "t05", "t06", "t07"}
+NONSTD_BASELINE_MSG = "--update-baseline needs a commissioned fixture and no --setup-note"
 
 
 def pytest_addoption(parser):
     g = parser.getgroup("hil", "ORCA hardware-in-the-loop")
     g.addoption("--hil", action="store_true", help="enable hardware tests")
     g.addoption("--tier", choices=("fast", "full"), default="fast", help="test tier (default fast)")
-    g.addoption("--fixture", default=None, help="fixture id (default: the only file in fixtures/)")
+    g.addoption("--fixture", default=None,
+                help="fixture id in tests/hil/fixtures/ or a path to a fixture file "
+                     "(default: the only file in tests/hil/fixtures/)")
+    g.addoption("--setup-note", default=None,
+                help="describe an undeclared hardware change; the run is logged as non-standard")
     g.addoption("--update-baseline", action="store_true",
                 help="repeat the run --baseline-repeats times and rewrite the [base] baselines")
     g.addoption("--baseline-repeats", type=int, default=3)
@@ -39,19 +44,14 @@ def pytest_addoption(parser):
     g.addoption("--results-root", default=None, help="default <data_root>/runs")
 
 
-def _fixture_path(fixture_id):
-    files = sorted((HIL_DIR / "fixtures").glob("*.yaml"))
-    if fixture_id:
-        return HIL_DIR / "fixtures" / f"{fixture_id}.yaml"
-    if len(files) != 1:
-        raise pytest.UsageError(f"--fixture is required ({len(files)} fixture files)")
-    return files[0]
-
-
 def pytest_cmdline_main(config):
     """--update-baseline: run the session --baseline-repeats times, then aggregate."""
     if (config.getoption("--update-baseline") and config.getoption("--hil")
             and not os.environ.get(baseline_update.CHILD_ENV)):
+        fixture = fixtures.load(fixtures.resolve_path(config.getoption("--fixture")))
+        if not fixtures.is_standard(fixture) or config.getoption("--setup-note"):
+            print(NONSTD_BASELINE_MSG, file=sys.stderr)
+            return 4
         return baseline_update.main_from_pytest(config)
     return None
 
@@ -68,8 +68,13 @@ def pytest_configure(config):
     config._hil = None
     if not config.getoption("--hil"):
         return
-    fx_path = _fixture_path(config.getoption("--fixture"))
-    fixture = yamlio.load(fx_path)
+    try:
+        fx_path = fixtures.resolve_path(config.getoption("--fixture"))
+        fixture = fixtures.load(fx_path)
+    except fixtures.FixtureError as e:
+        raise pytest.UsageError(str(e))
+    setup_note = config.getoption("--setup-note")
+    standard = fixtures.is_standard(fixture) and not setup_note
     data_root = Path(fixture["host"]["data_root"]).expanduser()
     results_root = Path(config.getoption("--results-root") or data_root / "runs").expanduser()
     tier = config.getoption("--tier")
@@ -77,7 +82,10 @@ def pytest_configure(config):
     started = datetime.now(timezone.utc)
     if config.getoption("--update-baseline") and git["dirty"]:
         raise pytest.UsageError("--update-baseline refuses to run on a dirty git tree")
-    run_id = f"{started:%Y%m%dT%H%M%SZ}_{(git['sha'] or 'nogit')[:7]}{'-dirty' if git['dirty'] else ''}_{tier}"
+    if config.getoption("--update-baseline") and not standard:
+        raise pytest.UsageError(NONSTD_BASELINE_MSG)
+    run_id = (f"{started:%Y%m%dT%H%M%SZ}_{(git['sha'] or 'nogit')[:7]}{'-dirty' if git['dirty'] else ''}"
+              f"_{tier}_{fixture['fixture_id']}{'' if standard else '-nonstd'}")
 
     retention = (fixture.get("storage") or {}).get("run_retention_days")
     if retention:
@@ -93,7 +101,8 @@ def pytest_configure(config):
         results_root=results_root, run_dir=run_dir, run_id=run_id, tier=tier, git=git,
         started=started, t0=time.time(), keep_raw=config.getoption("--keep-raw"),
         preflight_failed=None, fixture_suspect=False, test_status={}, configuration={},
-        session_metrics=[],
+        session_metrics=[], standard=standard, setup_note=setup_note,
+        fixture_sha256=fixtures.digest(fixture),
     )
 
 
@@ -292,6 +301,9 @@ def pytest_sessionfinish(session, exitstatus):
         "started_utc": ctx.started.strftime("%Y-%m-%dT%H:%M:%SZ"),
         "ended_utc": datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ"),
         "git_sha": ctx.git["sha"], "git_branch": ctx.git["branch"], "dirty": ctx.git["dirty"],
+        "fixture_status": ctx.fixture["status"], "standard": ctx.standard,
+        "fixture_extends": ctx.fixture.get("extends"), "fixture_judge": ctx.fixture.get("judge"),
+        "fixture_sha256": ctx.fixture_sha256, "setup_note": ctx.setup_note,
         "pytest_args": sys.argv[1:], "status": overall, "fixture_suspect": ctx.fixture_suspect,
         "tests": dict(sorted(ctx.test_status.items())), "session_metrics": session_metrics,
     }, ctx.run_dir / "run.yaml")
@@ -306,7 +318,18 @@ def pytest_sessionfinish(session, exitstatus):
             session.exitstatus = session.exitstatus or 1
 
 
+def pytest_report_header(config):
+    ctx = config._hil
+    if ctx is not None and not ctx.standard:
+        why = ctx.setup_note or f"{ctx.fixture['status']} fixture, judge: {ctx.fixture.get('judge')}"
+        return [f"HIL NON-STANDARD SETUP {ctx.fixture_id}: {why}"]
+    return None
+
+
 def pytest_terminal_summary(terminalreporter, exitstatus, config):
     ctx = config._hil
     if ctx is not None:
+        if not ctx.standard:
+            why = ctx.setup_note or f"{ctx.fixture['status']} fixture {ctx.fixture_id}"
+            terminalreporter.write_sep("-", f"NON-STANDARD SETUP: {why}")
         terminalreporter.write_sep("-", f"HIL run directory: {ctx.run_dir}")

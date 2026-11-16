@@ -19,7 +19,7 @@ import tarfile
 from datetime import datetime, timezone
 from pathlib import Path
 
-from . import HIL_DIR, scratch, yamlio
+from . import HIL_DIR, fixtures, scratch, yamlio
 from .baselines import Baselines
 
 GOLDEN_YAML = HIL_DIR / "golden.yaml"
@@ -63,6 +63,7 @@ def analysis_params(baselines):
 
 def analyze(test_id, zarrs, fixture, params):
     """Run one test's analyze() on {case: zarr}; returns (reduced, [Measurement])."""
+    fixture = fixtures.from_legacy(fixture)
     from .analysis.noise import analyze_rx_only
     from .analysis.presum import analyze_presum
     from .analysis.profile import analyze_profile
@@ -180,7 +181,7 @@ def make(fixture_path, out_root):
     from .capture import CaptureManager
     from .configs import merged_config
     from .radar import build_radar
-    fixture = yamlio.load(fixture_path)
+    fixture = fixtures.load(fixture_path)
     date = datetime.now(timezone.utc).strftime("%Y%m%d")
     tag = f"golden-{fixture['fixture_id']}-{date}"
     out_dir = Path(out_root) / tag
@@ -234,9 +235,8 @@ def main(argv=None):
     ap.add_argument("action", choices=("make", "upload", "fetch"))
     ap.add_argument("--fixture", default=None, help="fixture id (default: the only file in fixtures/)")
     a = ap.parse_args(argv)
-    files = sorted((HIL_DIR / "fixtures").glob("*.yaml"))
-    fx_path = HIL_DIR / "fixtures" / f"{a.fixture}.yaml" if a.fixture else files[0]
-    out_root = Path(yamlio.load(fx_path)["host"]["data_root"]).expanduser() / "golden"
+    fx_path = fixtures.resolve_path(a.fixture)
+    out_root = Path(fixtures.load(fx_path)["host"]["data_root"]).expanduser() / "golden"
     if a.action == "make":
         out_dir, golden = make(fx_path, out_root)
         total = sum(m["bytes"] for m in golden["assets"].values()) / 1e6

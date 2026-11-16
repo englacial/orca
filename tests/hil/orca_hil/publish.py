@@ -14,7 +14,7 @@ import shutil
 import subprocess
 from pathlib import Path
 
-from . import HIL_DIR, yamlio
+from . import yamlio
 
 HISTORY_COLUMNS = ["run_id", "timestamp_utc", "git_sha", "dirty", "uhd_commit", "uhd_dirty", "tier",
                    "fixture_id", "test_id", "case", "metric", "value", "units", "kind", "bound_type",
@@ -159,8 +159,7 @@ def main(argv=None):
     ap.add_argument("--publish-plots", action="store_true", help="also publish fast-tier plots of passing tests")
     a = ap.parse_args(argv)
     for rd in sorted(a.run_dirs, key=lambda p: p.name):
-        fixture_id = yamlio.load(rd / "run.yaml")["fixture_id"]
-        repo = a.repo or default_repo(yamlio.load(HIL_DIR / "fixtures" / f"{fixture_id}.yaml"))
+        repo = a.repo or default_repo(yamlio.load(rd / "configuration.yaml")["fixture"])
         msg = publish(rd, repo, push=not a.no_push, publish_plots=a.publish_plots)
         print(msg or f"{rd.name}: already published")
 

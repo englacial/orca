@@ -5,7 +5,7 @@ from datetime import datetime, timedelta
 import numpy as np
 import pytest
 
-from tests.hil.orca_hil import HIL_DIR, configs, sim, yamlio
+from tests.hil.orca_hil import HIL_DIR, configs, fixtures, sim, yamlio
 
 import processing_dask as pdk
 
@@ -15,7 +15,7 @@ _stamps = itertools.count()
 
 @pytest.fixture(scope="session")
 def fixture_cfg():
-    return yamlio.load(FIXTURE_FILE)
+    return fixtures.load(FIXTURE_FILE)
 
 
 @pytest.fixture(scope="session")

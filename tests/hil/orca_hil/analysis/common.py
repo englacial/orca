@@ -6,7 +6,7 @@ import xarray as xr
 from generate_chirp import generate_chirp
 import processing_dask as pdk
 
-C0 = 299792458.0
+from ..fixtures import chain_delay_s
 
 
 def open_capture(capture) -> xr.Dataset:
@@ -35,9 +35,8 @@ def chirp_length_samples(config):
 
 
 def expected_separation_samples(fixture, fs):
-    """Cable delay between the internal-leakage and loopback peaks, in samples."""
-    cable = fixture["hardware"]["cable"]
-    return float(cable["length_m"]) / (float(cable["velocity_factor"]) * C0) * fs
+    """RF-chain delay between the internal-leakage and loopback peaks, in samples."""
+    return chain_delay_s(fixture) * fs
 
 
 def compress(ds, chirp=None) -> xr.DataArray:

@@ -1,14 +1,12 @@
 fixture_id: b206mini_pi5_loopback_50m
 description: B206mini-i loopback, 30 dB pad at TX, 50 m coax
+status: commissioned
 hardware:
   sdr_model: B206mini-i
   sdr_serial: "36B5C60"
-  attenuator_db: 30
-  cable:
-    type: LMR-100
-    length_m: 50.0
-    velocity_factor: 0.66
-  adapters: []                   # TODO: list any adapters/barrels
+  chain:                         # SDR TX -> SDR RX, in order (see orca_hil/fixtures.py)
+    - {id: pad30, type: attenuator, loss_db: 30}
+    - {id: cable50, type: cable, model: LMR-100, length_m: 50.0, velocity_factor: 0.66}
 host:
   model: Raspberry Pi 5
   data_root: /mnt/nvme/orca-hil

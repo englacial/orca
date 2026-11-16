@@ -21,8 +21,35 @@ Hardware tests only run with `--hil` (the make targets pass it); otherwise they
 are skipped. T0 (preflight) always runs first, and if it fails every other
 hardware test is skipped.
 
-Options: `--tier fast|full`, `--fixture <id>`, `--keep-raw` (keep raw captures
-even for passing tests), `--results-root <dir>`.
+Options: `--tier fast|full`, `--fixture <id or path>`, `--keep-raw` (keep raw captures
+even for passing tests), `--results-root <dir>`, `--setup-note "<text>"` (log an
+undeclared hardware change; the run is marked non-standard).
+
+## Fixtures and non-standard setups
+
+A fixture's `hardware.chain` lists the RF parts from SDR TX to SDR RX in order
+(types `cable`, `adapter`, `attenuator`, `limiter`, `filter`, `amplifier`; fields
+are checked in `orca_hil/fixtures.py`). Numeric fields may be a frequency table
+`{freq_mhz: [...], value: [...]}`, and `source: datasheet|measured` records where
+a value came from.
+
+To test added parts, write a fixture that extends a commissioned one and restates
+the whole chain. It can live outside the repo and be passed by path:
+
+```yaml
+fixture_id: loopback_50m_rx_lna
+extends: b206mini_pi5_loopback_50m
+judge: info                       # status defaults to exploratory
+hardware:
+  chain:
+    - {id: pad30, type: attenuator, loss_db: 30}
+    - {id: cable50, type: cable, model: LMR-100, length_m: 50.0, velocity_factor: 0.66}
+    - {id: lna, type: amplifier, role: lna, gain_db: 20, nf_db: 1.0, max_input_dbm: 15, powered: true}
+```
+
+Runs on a fixture without `status: commissioned`, or with `--setup-note`, get
+`-nonstd` in the run id and `standard: false` in `run.yaml`, and cannot update
+baselines.
 
 ## UHD
 

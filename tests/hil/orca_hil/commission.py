@@ -14,7 +14,7 @@ from datetime import datetime
 
 import numpy as np
 
-from . import HIL_DIR, REPO_ROOT, configs, scratch, yamlio
+from . import REPO_ROOT, configs, fixtures, scratch, yamlio
 from .analysis.profile import analyze_profile
 from .lock import SdrLock
 from .radar import RadarRunner, build_radar
@@ -80,9 +80,8 @@ def main(argv=None):
     p.add_argument("--write", action="store_true", help="write proposed values to the fixture file")
     args = p.parse_args(argv)
 
-    files = sorted((HIL_DIR / "fixtures").glob("*.yaml"))
-    fx_path = HIL_DIR / "fixtures" / f"{args.fixture}.yaml" if args.fixture else files[0]
-    fixture = yamlio.load(fx_path)
+    fx_path = fixtures.resolve_path(args.fixture)
+    fixture = fixtures.load(fx_path)
     data_root = fixture["host"]["data_root"]
     scratch.ensure_scratch_link(data_root)
     workdir = REPO_ROOT / scratch.SCRATCH_LINK_NAME / f"commission_{datetime.now():%Y%m%dT%H%M%S}"
