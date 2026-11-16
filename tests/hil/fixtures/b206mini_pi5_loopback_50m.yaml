@@ -4,9 +4,8 @@ status: commissioned
 hardware:
   sdr_model: B206mini-i
   sdr_serial: "36B5C60"
-  chain:                         # SDR TX -> SDR RX, in order (see orca_hil/fixtures.py)
-    # Two short jumpers, about 1 ft each (type, velocity factor and position approximate)
-    - {id: jumper1, type: cable, length_m: 0.3, velocity_factor: 0.7}
+  chain:                         # SDR TX -> SDR RX, in order (see orca_hil/fixtures.py),
+                                 # as when the baselines were measured (2026-10)
     - {id: pad30, type: attenuator, loss_db: 30}
     - id: cable50
       type: cable
@@ -16,7 +15,6 @@ hardware:
       source: measured           # S12, 2026-10-07 (radar-testbench hardware_reference/50m_loopback)
       loss_db: {freq_mhz: [100, 150, 200, 250, 300, 330, 350, 400, 450, 500, 600, 750, 900],
                 value: [12.1, 14.4, 16.5, 18.4, 20.2, 21.2, 21.8, 23.4, 24.9, 26.4, 29.1, 32.7, 35.9]}
-    - {id: jumper2, type: cable, length_m: 0.3, velocity_factor: 0.7}
 host:
   model: Raspberry Pi 5
   data_root: /mnt/nvme/orca-hil

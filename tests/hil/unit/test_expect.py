@@ -246,3 +246,13 @@ def test_recorder_applies_and_logs_adjustments(tmp_path, base, thresholds):
     assert r["status"] == "info" and r["expect"]["demoted_to_info"]
     [r] = rec.record("exit_status_ok", False)
     assert r["status"] == "fail" and "expect" not in r
+
+
+def test_short_passive_cables_shift_delay_and_keep_snr_judged(tmp_path, base, thresholds):
+    jumper = {"id": "jumper1", "type": "cable", "length_m": 0.3, "velocity_factor": 0.603}
+    e = expect.build(child(tmp_path, base, [jumper], judge="expect"))
+    assert e.adjust("t06", "spread_1sigma_db", None, checks(thresholds, "t06", "spread_1sigma_db")[0]) == expect.NONE
+    a = e.adjust("t01", "peak_separation_samples", None, checks(thresholds, "t01", "peak_separation_samples")[1])
+    assert a.shift == pytest.approx(0.3 / (0.603 * fixtures.C0) * 56e6)
+    lossy = {**jumper, "id": "jumper2", "loss_db": 1.0}
+    assert "snr" in expect.build(child(tmp_path, base, [lossy], judge="expect")).affected

@@ -14,7 +14,7 @@
 #     -gain (opposite sign), gain_atten_check (at the T0 attenuator-check gain),
 #     delay (samples), snr_db (by the gain change, if the noise is unaffected)
 #   Not predictable, recorded as info:  noise, linearity, bandwidth, spectral, phase,
-#     snr (any change in gain or noise)
+#     snr (a change in noise, or a gain change of 0.5 dB or more)
 #   Untagged metrics are judged as usual on every fixture.
 #
 # All values are provisional until Phase 5 (baselines and tuning).

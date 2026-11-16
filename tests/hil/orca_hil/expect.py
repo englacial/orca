@@ -34,6 +34,7 @@ TYPE_EFFECTS = {
     "amplifier": {"gain", "delay", "noise", "linearity", "spectral", "bandwidth", "phase"},
 }
 DEFAULT_DELAY_TOL = 0.2          # fraction of delay_ns when delay_tol_ns is not given
+SNR_GAIN_THRESHOLD_DB = 0.5      # smaller gain changes (with tolerance) leave snr metrics judged
 CASE_FREQ_RE = re.compile(r"^(\d+(?:\.\d+)?)MHz$")
 OVERRIDE_KEY_RE = re.compile(r"^t\d\d\.(\*|\w+(/[\w.-]+)?)$")
 
@@ -122,11 +123,16 @@ class Expectation:
             self.reasons.setdefault("noise", "rf_base.rx_gain changed")
         if "gain" in self.affected or self._att_gain(fixture) != self._att_gain(self.ref):
             self.affected.add("gain_atten_check")
-        if self.affected & {"gain", "noise"}:
-            self.affected.add("snr")
         fs = float(configs.merged_config(fixture, {})["GENERATE"]["sample_rate"])
         self.delay_samples = (fixtures.chain_delay_s(fixture) - fixtures.chain_delay_s(self.ref)) * fs
         self.delay_tol_samples = sum(_delay_tol_s(el) for el in self.changed) * fs
+        if "noise" in self.affected:
+            self.affected.add("snr")
+        elif "gain" in self.affected:
+            shift, tol, why = self.gain_shift()
+            if why or abs(shift) + tol >= SNR_GAIN_THRESHOLD_DB:
+                self.affected.add("snr")
+                self.reasons.setdefault("snr", why or f"gain change {shift:+.2g} dB")
 
     @staticmethod
     def _att_gain(fx):
