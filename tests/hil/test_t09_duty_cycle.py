@@ -6,7 +6,7 @@ tests/error_code_late_command_sweep.py (full duplex).
 import numpy as np
 import pytest
 
-from tests.hil.orca_hil import plotting, telemetry, testkit
+from tests.hil.orca_hil import fixtures, plotting, telemetry, testkit
 from tests.hil.orca_hil.analysis.duty import analyze_duty, duty_to_pri
 from tests.hil.orca_hil.configs import merged_config
 from tests.hil.orca_hil.radar import RadarTimeout
@@ -61,7 +61,9 @@ def test_t09_duty_cycle(hil, tier, fixture_cfg, capture_manager, recorder):
     p = PARAMS[tier]
     base = merged_config(fixture_cfg, OVERRIDES)
     points, caps, throttled = [], [], False
-    for duty in p["duties"]:
+    # Duties above a power amplifier's enable-duty limit are skipped
+    max_duty = fixtures.max_test_duty(fixture_cfg, base)
+    for duty in [d for d in p["duties"] if d <= max_duty + 1e-9]:
         overrides = {"CHIRP": {**OVERRIDES["CHIRP"], "num_pulses": p["n_pulses"],
                                "pulse_rep_int": duty_to_pri(base, duty)}}
         killed = False

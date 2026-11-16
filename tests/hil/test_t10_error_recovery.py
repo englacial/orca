@@ -7,7 +7,7 @@ import numpy as np
 import pytest
 import xarray as xr
 
-from tests.hil.orca_hil import plotting, testkit, yamlio
+from tests.hil.orca_hil import fixtures, plotting, testkit, yamlio
 from tests.hil.orca_hil.analysis.duty import duty_to_pri, point_stats
 from tests.hil.orca_hil.analysis.recovery import analyze_recovery
 from tests.hil.orca_hil.analysis.timing import expected_slow_time
@@ -28,7 +28,8 @@ def find_duty(capture_manager, fixture, baselines, max_probes):
     """Bracketing search for a duty cycle with an error rate in TARGET."""
     base = merged_config(fixture, OVERRIDES)
     knee = testkit.baseline_mean(baselines, "t09", "max_duty_with_error_rate_below_2pct")
-    duty = min(knee + 0.05, 1.0) if knee is not None else DEFAULT_START_DUTY
+    top = fixtures.max_test_duty(fixture, base)      # a power amplifier's enable-duty limit
+    duty = min(knee + 0.05, top) if knee is not None else min(DEFAULT_START_DUTY, top)
     probes = []
     for i in range(max_probes):
         ov = {"CHIRP": {**OVERRIDES["CHIRP"], "num_pulses": PROBE_PULSES, "pulse_rep_int": duty_to_pri(base, duty)}}
@@ -37,7 +38,7 @@ def find_duty(capture_manager, fixture, baselines, max_probes):
         probes.append((duty, rate))
         if TARGET[0] <= rate <= TARGET[1]:
             break
-        duty = min(duty + 0.05, 1.0) if rate < TARGET[0] else max(duty - 0.05, 0.1)
+        duty = min(duty + 0.05, top) if rate < TARGET[0] else max(duty - 0.05, 0.1)
     else:
         duty = probes[-1][0]
     return duty, probes

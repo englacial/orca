@@ -16,7 +16,7 @@ import time
 from dataclasses import dataclass, field
 from pathlib import Path
 
-from . import REPO_ROOT, yamlio
+from . import REPO_ROOT, fixtures, watchdog, yamlio
 
 from generate_chirp import generate_from_yaml_filename
 from save_data import save_data
@@ -177,11 +177,16 @@ class RadarRunner:
 
         generate_from_yaml_filename(str(cfg_abs))
         log_path = case_dir / "uhd_stdout.log"
+        dogs = fixtures.watchdogs(self.fixture) if "hardware" in self.fixture else []
+        watchdog.check(dogs, min_remaining_s=timeout_s)     # before any RF
+        monitor = None
         t0 = time.time()
         with open(log_path, "w") as log, open(case_dir / "uhd_stderr.log", "w") as err:
             proc = subprocess.Popen(["./radar", str(config_rel)], cwd=self.repo_root / "sdr" / "build",
                                     env=uhd_env(self.fixture), stdout=subprocess.PIPE, stderr=err,
                                     text=True, bufsize=1)
+            if dogs:
+                monitor = watchdog.Monitor(dogs, proc)
             reader = threading.Thread(target=self._pump, args=(proc.stdout, log), daemon=True)
             reader.start()
             try:
@@ -202,7 +207,13 @@ class RadarRunner:
                 proc.wait()
                 result.timed_out = result.killed = True
             result.exited_at = time.time()
+            if monitor is not None:
+                monitor.close()
             reader.join(timeout=10)
+        if monitor is not None and monitor.failure:
+            raise watchdog.WatchdogError(f"radar stopped: {monitor.failure} ({config_rel})")
+        if dogs:
+            watchdog.check(dogs)    # a trip the monitor did not see before the radar exited
         result.returncode = proc.returncode
         result.duration_s = result.exited_at - t0
         result.log_path = log_path

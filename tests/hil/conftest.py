@@ -13,7 +13,7 @@ from types import SimpleNamespace
 
 import pytest
 
-from tests.hil.orca_hil import REPO_ROOT, baseline_update, expect, fixtures, scratch, telemetry, yamlio
+from tests.hil.orca_hil import REPO_ROOT, baseline_update, expect, fixtures, scratch, telemetry, watchdog, yamlio
 from tests.hil.orca_hil.baselines import Baselines
 from tests.hil.orca_hil.metrics import MetricRecorder
 from tests.hil.orca_hil.thresholds import evaluate, load_thresholds
@@ -109,17 +109,18 @@ def pytest_configure(config):
         started=started, t0=time.time(), keep_raw=config.getoption("--keep-raw"),
         preflight_failed=None, fixture_suspect=False, test_status={}, configuration={},
         session_metrics=[], standard=standard, setup_note=setup_note,
-        fixture_sha256=fixtures.digest(fixture), expectation=expectation,
+        fixture_sha256=fixtures.digest(fixture), expectation=expectation, halted=None,
         setup=setup_summary(fixture, expectation),
     )
 
 
 def check_setup(fixture, powered_on):
     """Refuse a session whose fixture is unsafe to run at its base settings or not confirmed."""
-    unsupported = fixtures.watchdog_elements(fixture)
-    if unsupported:
-        raise pytest.UsageError(f"chain elements {unsupported} need a watchdog, which the HIL harness "
-                                "does not support yet")
+    dogs = fixtures.watchdogs(fixture)
+    try:
+        watchdog.check(dogs)
+    except watchdog.WatchdogError as e:
+        raise pytest.UsageError(f"{e}. Start the watchdog before the session (see the fixture's notes)")
     powered = set(fixtures.powered_elements(fixture))
     confirmed = {x.strip() for x in powered_on.split(",") if x.strip()}
     if powered != confirmed:
@@ -181,6 +182,8 @@ def pytest_collection_modifyitems(config, items):
 
 def pytest_runtest_setup(item):
     ctx = item.config._hil
+    if ctx and item.get_closest_marker("hardware") and ctx.halted:
+        pytest.skip(f"session halted: {ctx.halted}")
     if ctx and item.get_closest_marker("hardware") and ctx.expectation is not None:
         if _test_id(item) in ctx.expectation.skip_tests:
             pytest.skip(f"skip_tests in fixture {ctx.fixture_id}")
@@ -195,6 +198,8 @@ def pytest_runtest_makereport(item, call):
     setattr(item, f"rep_{rep.when}", rep)
     ctx = item.config._hil
     tid = _test_id(item)
+    if ctx and call.excinfo is not None and call.excinfo.errisinstance(watchdog.WatchdogError):
+        ctx.halted = ctx.halted or str(call.excinfo.value)[:300]   # no further captures this session
     if ctx and tid and item.get_closest_marker("hardware"):
         if rep.failed:
             ctx.test_status[tid] = "fail"
@@ -344,8 +349,10 @@ def pytest_sessionfinish(session, exitstatus):
                                 "status": ev.status})
         if ev.status == "fail":
             session.exitstatus = 1
+    if ctx.halted:
+        session.exitstatus = session.exitstatus or 1
     statuses = set(ctx.test_status.values())
-    overall = ("fail" if "fail" in statuses or any(m["status"] == "fail" for m in session_metrics)
+    overall = ("fail" if ctx.halted or "fail" in statuses or any(m["status"] == "fail" for m in session_metrics)
                else "pass" if statuses else "empty")
     yamlio.dump({
         "run_id": ctx.run_id, "tier": ctx.tier, "fixture_id": ctx.fixture_id,
@@ -355,7 +362,7 @@ def pytest_sessionfinish(session, exitstatus):
         "fixture_status": ctx.fixture["status"], "standard": ctx.standard,
         "fixture_extends": ctx.fixture.get("extends"), "fixture_judge": ctx.fixture.get("judge"),
         "fixture_sha256": ctx.fixture_sha256, "setup_note": ctx.setup_note,
-        "expectation": ctx.setup["expectation"],
+        "expectation": ctx.setup["expectation"], "halted": ctx.halted,
         "pytest_args": sys.argv[1:], "status": overall, "fixture_suspect": ctx.fixture_suspect,
         "tests": dict(sorted(ctx.test_status.items())), "session_metrics": session_metrics,
     }, ctx.run_dir / "run.yaml")
@@ -384,4 +391,6 @@ def pytest_terminal_summary(terminalreporter, exitstatus, config):
         if not ctx.standard:
             why = ctx.setup_note or f"{ctx.fixture['status']} fixture {ctx.fixture_id}"
             terminalreporter.write_sep("-", f"NON-STANDARD SETUP: {why}")
+        if ctx.halted:
+            terminalreporter.write_sep("!", f"SESSION HALTED: {ctx.halted}")
         terminalreporter.write_sep("-", f"HIL run directory: {ctx.run_dir}")

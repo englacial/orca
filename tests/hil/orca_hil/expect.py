@@ -123,7 +123,13 @@ class Expectation:
             self.reasons.setdefault("noise", "rf_base.rx_gain changed")
         if "gain" in self.affected or self._att_gain(fixture) != self._att_gain(self.ref):
             self.affected.add("gain_atten_check")
-        fs = float(configs.merged_config(fixture, {})["GENERATE"]["sample_rate"])
+        cfg, cfg0 = configs.merged_config(fixture, {}), configs.merged_config(self.ref, {})
+        fs = float(cfg["GENERATE"]["sample_rate"])
+        # TX starting tx_lead before RX moves every echo earlier in the RX window
+        self.timing_samples = -(float(cfg["CHIRP"]["tx_lead"]) - float(cfg0["CHIRP"]["tx_lead"])) * fs
+        if self.timing_samples:
+            self.affected.add("timing")
+            self.reasons.setdefault("timing", "CHIRP.tx_lead changed")
         self.delay_samples = (fixtures.chain_delay_s(fixture) - fixtures.chain_delay_s(self.ref)) * fs
         self.delay_tol_samples = sum(_delay_tol_s(el) for el in self.changed) * fs
         if "noise" in self.affected:
@@ -223,9 +229,14 @@ class Expectation:
         base = "gain" if tag in ("-gain", "snr_db") else tag
         return self.reasons.get(base) or self.reasons.get("all") or "setup changed"
 
+    def timing_shift_samples(self):
+        return 0.0 if self.mode == "note" or self.ref is None else self.timing_samples
+
     def _shift(self, tag, case):
         if tag == "delay":
             return self.delay_samples, self.delay_tol_samples, None
+        if tag == "timing":
+            return self.timing_samples, 0.0, None
         if tag == "snr_db" and "noise" in self.affected:
             return None, 0.0, f"noise: {self._reason('noise')}"
         m = CASE_FREQ_RE.match(case or "")
@@ -245,5 +256,6 @@ class Expectation:
                        affected_tags=sorted(self.affected),
                        gain_shift_db=shift, gain_tol_db=tol, gain_unpredictable=why,
                        delay_shift_samples=self.delay_samples, delay_tol_samples=self.delay_tol_samples,
+                       timing_shift_samples=self.timing_samples,
                        atten_check_shift_db=self.atten_check_shift()[0])
         return out

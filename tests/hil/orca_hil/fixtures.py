@@ -39,12 +39,25 @@ ELEMENT_FIELDS = {
     "limiter": ({"loss_db", "threshold_dbm"}, {"loss_tol_db", "leakage_dbm"}),
     "filter": ({"loss_db"}, {"loss_tol_db", "passband_mhz", "stopband_rejection_db"}),
     "amplifier": ({"role", "gain_db"}, {"gain_tol_db", "nf_db", "p1db_out_dbm", "powered", "supply",
-                                        "watchdog"}),
+                                        "watchdog", "max_gain_db", "max_output_dbm", "max_enable_duty",
+                                        "startup_burst_dbm", "radar_config"}),
 }
+# Amplifier fields for a power amplifier:
+#   max_gain_db        gain used by the power budget (e.g. the gain at maximum VVA setting until
+#                      the actual setting is tested); gain_db stays the expected gain
+#   max_output_dbm     output limit approved for this setup (budget error above it, less margin)
+#   max_enable_duty    limit on the enable duty, tx_duration / pulse_rep_int, of every capture
+#   startup_burst_dbm  output of bursts the amp emits independently of the drive (e.g. at radar
+#                      start); followed through the rest of the chain by the budget
+#   radar_config       radar config merged into every capture last (e.g. the GPIO enable pin)
+#   watchdog           {status_file, max_age_s}: captures run only while an external watchdog
+#                      reports itself armed in status_file (orca_hil/watchdog.py)
 SOURCES = ("datasheet", "measured", "estimate")
+UNRATED_SAFE_DBM = 20.0     # elements that can see more than this from a power amplifier need a rating
 AMP_ROLES = ("lna", "pa")
 # Fields that may be a number or a frequency table {freq_mhz: [...], value: [...]}
 FREQ_FIELDS = {"loss_db", "loss_db_per_100m", "loss_tol_db", "gain_db", "gain_tol_db", "nf_db",
+               "max_gain_db", "max_output_dbm", "startup_burst_dbm",
                "p1db_out_dbm", "max_input_dbm", "threshold_dbm", "leakage_dbm", "delay_ns",
                "stopband_rejection_db"}
 
@@ -173,11 +186,26 @@ def validate(fx):
         if not table or any(b <= a for a, b in zip(g, g[1:])):
             raise FixtureError(f"{fid}: calibration.tx_power_table tx_gain must increase")
     ids = set()
+    pa, peak = None, None        # worst-case power from a power amplifier, followed down the chain
+    f0 = float((fx.get("rf_base") or {}).get("freq") or 0.0)
     for i, el in enumerate(hw["chain"] or []):
         validate_element(f"{fid}: chain[{i}]", el)
         if el["id"] in ids:
             raise FixtureError(f"{fid}: duplicate chain id {el['id']!r}")
         ids.add(el["id"])
+        if peak is not None:
+            if peak > UNRATED_SAFE_DBM and el["type"] != "cable" and input_limit_dbm(el, f0) is None:
+                raise FixtureError(f"{fid}: {el['id']} can see {peak:.0f} dBm from power amplifier {pa} "
+                                   "and needs max_input_dbm or power_rating_w")
+            peak += budget_gain_db(el, f0)
+        if el["type"] == "amplifier" and el["role"] == "pa":
+            if "watchdog" not in el:
+                raise FixtureError(f"{fid}: power amplifier {el['id']} needs a watchdog")
+            pa = el["id"]
+            peak = max(value_at(el.get(k), f0, -math.inf)
+                       for k in ("p1db_out_dbm", "max_output_dbm", "startup_burst_dbm"))
+            if peak == -math.inf:
+                raise FixtureError(f"{fid}: power amplifier {el['id']} needs p1db_out_dbm")
 
 
 def validate_element(label, el):
@@ -199,6 +227,16 @@ def validate_element(label, el):
         raise FixtureError(f"{label}: role must be one of {AMP_ROLES}")
     for k in FREQ_FIELDS & el.keys():
         _check_value(f"{label}.{k}", el[k])
+    if "watchdog" in el:
+        w = el["watchdog"]
+        if not isinstance(w, dict) or "status_file" not in w or set(w) - {"status_file", "max_age_s"}:
+            raise FixtureError(f"{label}: watchdog must be {{status_file[, max_age_s]}}")
+    if "radar_config" in el and not isinstance(el["radar_config"], dict):
+        raise FixtureError(f"{label}: radar_config must be a mapping of config sections")
+    if "max_enable_duty" in el and not 0 < float(el["max_enable_duty"]) <= 1:
+        raise FixtureError(f"{label}: max_enable_duty must be in (0, 1]")
+    if "power_rating_w" in el and not float(el["power_rating_w"]) > 0:
+        raise FixtureError(f"{label}: power_rating_w must be positive")
 
 
 def _check_value(label, v):
@@ -316,16 +354,41 @@ def tx_power_dbm(fixture, tx_gain):
     return float(np.interp(tx_gain, g, p))
 
 
+def input_limit_dbm(el, freq_hz):
+    """An element's input limit: the lower of max_input_dbm and power_rating_w, or None."""
+    lims = []
+    if el.get("max_input_dbm") is not None:
+        lims.append(value_at(el["max_input_dbm"], freq_hz))
+    if el.get("power_rating_w") is not None:
+        lims.append(10 * math.log10(float(el["power_rating_w"]) * 1000))
+    return min(lims) if lims else None
+
+
+def budget_gain_db(el, freq_hz):
+    """Gain for the power budget: max_gain_db where given, unknown losses as 0 dB."""
+    if el["type"] == "amplifier" and el.get("max_gain_db") is not None:
+        return value_at(el["max_gain_db"], freq_hz)
+    g = element_gain_db(el, freq_hz)
+    return 0.0 if g is None else g
+
+
 def power_budget(fixture, tx_gain, freq_hz):
-    """[{id, type, input_dbm, output_dbm}] for each element, then {id: 'sdr_rx', input_dbm}."""
+    """[{id, type, input_dbm, output_dbm, burst_dbm}] for each element, then the SDR RX input.
+
+    burst_dbm is the element's input from an upstream amplifier's startup_burst_dbm (or None).
+    """
     p = tx_power_dbm(fixture, tx_gain)
+    burst = None
     stages = []
     for el in fixture["hardware"]["chain"]:
-        g = element_gain_db(el, freq_hz)
-        out = p + (0.0 if g is None else g)
-        stages.append({"id": el["id"], "type": el["type"], "input_dbm": p, "output_dbm": out})
+        g = budget_gain_db(el, freq_hz)
+        out = p + g
+        stages.append({"id": el["id"], "type": el["type"], "input_dbm": p, "output_dbm": out, "burst_dbm": burst})
+        burst = None if burst is None else burst + g
+        if el.get("startup_burst_dbm") is not None:
+            burst = max(burst if burst is not None else -math.inf, value_at(el["startup_burst_dbm"], freq_hz))
         p = out
-    stages.append({"id": "sdr_rx", "type": "sdr", "input_dbm": p, "output_dbm": None})
+    stages.append({"id": "sdr_rx", "type": "sdr", "input_dbm": p, "output_dbm": None, "burst_dbm": burst})
     return stages
 
 
@@ -344,18 +407,24 @@ def budget_problems(fixture, tx_gain, freq_hz):
     els = {el["id"]: el for el in fixture["hardware"]["chain"]}
     for st in power_budget(fixture, tx_gain, freq_hz):
         pin = st["input_dbm"]
+        peak = max(pin, st["burst_dbm"]) if st["burst_dbm"] is not None else pin
+        what = "input" if peak == pin else "start-up burst input"
         if st["id"] == "sdr_rx":
             lim = safety.get("rx_max_input_dbm")
             if lim is None:
                 errors.append("safety.rx_max_input_dbm is not set")
-            elif pin > lim - margin:
-                errors.append(f"SDR RX input {pin:.1f} dBm > {lim} dBm - {margin:g} dB margin")
+            elif peak > lim - margin:
+                errors.append(f"SDR RX {what} {peak:.1f} dBm > {lim} dBm - {margin:g} dB margin")
             continue
         el = els[st["id"]]
-        if el.get("max_input_dbm") is not None:
-            lim = value_at(el["max_input_dbm"], freq_hz)
-            if pin > lim - margin:
-                errors.append(f"{el['id']} input {pin:.1f} dBm > max_input {lim:g} dBm - {margin:g} dB margin")
+        lim = input_limit_dbm(el, freq_hz)
+        if lim is not None and peak > lim - margin:
+            errors.append(f"{el['id']} {what} {peak:.1f} dBm > limit {lim:.1f} dBm - {margin:g} dB margin")
+        if el.get("max_output_dbm") is not None:
+            mx = value_at(el["max_output_dbm"], freq_hz)
+            if st["output_dbm"] > mx - margin:
+                errors.append(f"{el['id']} output {st['output_dbm']:.1f} dBm > approved {mx:g} dBm - "
+                              f"{margin:g} dB margin")
         if el["type"] == "limiter":
             thr = value_at(el["threshold_dbm"], freq_hz)
             if pin > thr - lin_margin:
@@ -387,3 +456,42 @@ def powered_elements(fixture):
 
 def watchdog_elements(fixture):
     return [el["id"] for el in fixture["hardware"]["chain"] if el.get("watchdog")]
+
+
+def watchdogs(fixture):
+    """[(element id, {status_file, max_age_s})] for chain elements that need a watchdog."""
+    return [(el["id"], el["watchdog"]) for el in fixture["hardware"]["chain"] if el.get("watchdog")]
+
+
+def chain_radar_config(fixture):
+    """The chain elements' radar_config, merged in chain order."""
+    out = {}
+    for el in fixture["hardware"]["chain"]:
+        for section, vals in (el.get("radar_config") or {}).items():
+            out.setdefault(section, {}).update(vals)
+    return out
+
+
+def enable_duty(cfg):
+    """Upper bound on the amp-enable duty of a radar config: tx_duration / pulse_rep_int."""
+    return float(cfg["CHIRP"]["tx_duration"]) / float(cfg["CHIRP"]["pulse_rep_int"])
+
+
+def max_test_duty(fixture, cfg):
+    """Highest duty max(tx_duration, rx_duration) / PRI (as T9/T10 define it) that keeps every
+    element within its max_enable_duty, for the durations in cfg; 1.0 without a limit."""
+    caps = [float(el["max_enable_duty"]) for el in fixture["hardware"]["chain"] if el.get("max_enable_duty")]
+    if not caps:
+        return 1.0
+    tx, rx = float(cfg["CHIRP"]["tx_duration"]), float(cfg["CHIRP"]["rx_duration"])
+    return min(1.0, min(caps) * max(tx, rx) / tx)
+
+
+def duty_problems(fixture, cfg):
+    """Errors for chain elements whose max_enable_duty the config exceeds."""
+    if not cfg["RF0"].get("transmit", True):
+        return []
+    d = enable_duty(cfg)
+    return [f"{el['id']} enable duty {d:.3f} > max_enable_duty {el['max_enable_duty']}"
+            for el in fixture["hardware"]["chain"]
+            if el.get("max_enable_duty") is not None and d > float(el["max_enable_duty"])]

@@ -42,7 +42,9 @@ def loopback_index_from_baseline(baselines, expectation=None):
     sep = baseline_mean(baselines, "t01", "peak_separation_samples")
     if t1 is None or sep is None:
         return None
-    return t1 + sep + (expectation.delay_shift_samples() if expectation is not None else 0.0)
+    if expectation is None:
+        return t1 + sep
+    return t1 + sep + expectation.delay_shift_samples() + expectation.timing_shift_samples()
 
 
 def repo_path(rel):

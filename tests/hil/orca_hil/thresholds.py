@@ -22,7 +22,7 @@ DEFAULT_K = 4.0
 ABS_TYPES = {"range", "range_about", "max", "min", "abs_max", "equals"}
 BASE_TYPES = {"two_sided", "lower", "upper", "ratio_upper", "factor_two_sided"}
 KINDS = {"abs", "base", "info"}
-SHIFT_TAGS = {"gain", "-gain", "gain_atten_check", "delay", "snr_db"}
+SHIFT_TAGS = {"gain", "-gain", "gain_atten_check", "delay", "snr_db", "timing"}
 INFO_TAGS = {"noise", "linearity", "bandwidth", "spectral", "phase", "snr"}
 TAGS = SHIFT_TAGS | INFO_TAGS
 

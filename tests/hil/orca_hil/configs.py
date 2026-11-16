@@ -4,7 +4,7 @@ import os
 from pathlib import Path
 
 from . import REPO_ROOT, yamlio
-from .fixtures import FixtureError, budget_problems
+from .fixtures import FixtureError, budget_problems, chain_radar_config, duty_problems
 
 # Section 2.3 of the HIL plan: values applied over config/default.yaml's structure.
 BASE_OVERRIDES = {
@@ -51,7 +51,9 @@ def base_config() -> dict:
 
 def merged_config(fixture: dict, overrides: dict) -> dict:
     rf_base = {k: v for k, v in (fixture.get("rf_base") or {}).items() if v is not None}
-    return deep_merge(deep_merge(base_config(), {"RF0": rf_base}), overrides)
+    cfg = deep_merge(deep_merge(base_config(), {"RF0": rf_base}), overrides)
+    # Chain elements' radar_config (e.g. a power amplifier's enable pin) last, so no test overrides it
+    return deep_merge(cfg, chain_radar_config(fixture)) if "hardware" in fixture else cfg
 
 
 def _is_integer(x, tol=1e-9):
@@ -75,6 +77,8 @@ def validate(cfg: dict, fixture: dict):
                        budget_problems(fixture, float(rf["tx_gain"]), float(rf["freq"]))[0]]
         except FixtureError as e:
             errors.append(f"power budget: {e}")
+    if "hardware" in fixture:
+        errors += duty_problems(fixture, cfg)
     if gen["out_file"] != files["chirp_loc"]:
         errors.append(f"GENERATE.out_file {gen['out_file']!r} != FILES.chirp_loc {files['chirp_loc']!r}")
     for section, key in (("CHIRP", "rx_duration"), ("GENERATE", "chirp_length"),

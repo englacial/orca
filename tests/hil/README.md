@@ -75,7 +75,20 @@ chain, and the capture is refused if any part's `max_input_dbm`, or the SDR's
 `safety.rx_max_input_dbm`, is exceeded less `safety.power_margin_db`, or a
 limiter would limit (unless `safety.allow_limiting`). T8 and T12 skip the gains
 and frequencies that fail. Powered parts must be confirmed with
-`--powered-on <ids>`; parts with `watchdog` set are refused.
+`--powered-on <ids>`.
+
+### Power amplifiers
+
+An amplifier with `role: pa` needs a `watchdog`: an external process, started
+before the session and independent of it, that watches the amplifier and stops
+the radar on an unsafe reading. It reports through a JSON status file
+(`orca_hil/watchdog.py` describes the format). Every capture checks that the
+watchdog is armed, fresh and will not expire during the capture, and a capture is
+stopped if that changes while it runs; any watchdog problem halts the session.
+Other PA fields (see `orca_hil/fixtures.py`): `max_gain_db` for the budget,
+`max_output_dbm`, `startup_burst_dbm`, `max_enable_duty` (T9/T10 skip higher duties)
+and `radar_config`, merged into every capture last (e.g. the GPIO enable pin).
+Elements that can see more than +20 dBm from the PA must have a rating.
 
 ## UHD
 

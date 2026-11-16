@@ -12,7 +12,8 @@
 # affected_by: what a change in the RF chain does to the metric (orca_hil/expect.py).
 #   Predictable, the bound is shifted:  gain (dB, 1:1 with path gain at the base gains),
 #     -gain (opposite sign), gain_atten_check (at the T0 attenuator-check gain),
-#     delay (samples), snr_db (by the gain change, if the noise is unaffected)
+#     delay (samples), snr_db (by the gain change, if the noise is unaffected),
+#     timing (absolute sample index: -change in CHIRP.tx_lead x sample rate)
 #   Not predictable, recorded as info:  noise, linearity, bandwidth, spectral, phase,
 #     snr (a change in noise, or a gain change of 0.5 dB or more)
 #   Untagged metrics are judged as usual on every fixture.
@@ -63,7 +64,7 @@ t01:
   merged_matches_parts:             {kind: abs, bound: {type: equals, value: true}, units: bool}
   radar_binary_changed_by_runpy:    {kind: info, units: bool}
   # Range profile (case a_profile)
-  leakage_peak_index:           {kind: base, bound: {type: two_sided, tol: 0.1}, units: samples}
+  leakage_peak_index:           {kind: base, bound: {type: two_sided, tol: 0.1}, units: samples, affected_by: [timing]}
   peak_separation_samples:
     - {kind: abs, bound: {type: range_about, center: expected, tol: 1.5}, units: samples}
     - {kind: base, bound: {type: two_sided, tol: 0.1}, units: samples, affected_by: [delay]}
