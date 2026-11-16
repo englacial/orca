@@ -128,12 +128,22 @@ def test_t00_preflight(hil, tier, fixture_cfg, radar_build, capture_manager, rec
         _, _, fit, _ = locate_peaks(open_capture(cap.zarr), fx)
         peak = float(db10(abs(fit.a2) ** 2))
         recorder.record("attenuator_check_peak_dbfs", peak)
-        expected = att.get("expected_peak_dbfs")
-        if expected is not None and peak > expected + att["tolerance_db"]:
+        # Non-standard chain: the reference fixture's expected peak plus the declared chain's
+        # (linear) gain change, so this also checks the chain is wired as declared
+        exp_obj, shift, extra = hil.expectation, 0.0, 0.0
+        if exp_obj is not None and exp_obj.ref is not None:
+            ref_att = exp_obj.ref["safety"]["attenuator_check"]
+            expected = ref_att.get("expected_peak_dbfs")
+            shift, extra = exp_obj.atten_check_shift()
+        else:
+            expected = att.get("expected_peak_dbfs")
+        limit_db = att["tolerance_db"] + extra
+        if expected is not None and peak > expected + shift + limit_db:
             recorder.finalize(fail=False)
             pytest.exit(f"ABORT: loopback peak {peak:.1f} dBFS at tx_gain {att['tx_gain']} is more than "
-                        f"{att['tolerance_db']} dB above the expected {expected} dBFS; "
-                        "the 30 dB attenuator may be missing", returncode=3)
+                        f"{limit_db:g} dB above the expected {expected + shift:.1f} dBFS "
+                        f"(chain gain change {shift:+.1f} dB); an attenuator may be missing or the "
+                        "chain is not as declared in the fixture", returncode=3)
 
     # Warm-up: continuous TX at base settings. Presums keep the data volume small.
     if fx["rf_base"].get("tx_gain") is None:

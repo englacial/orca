@@ -3,19 +3,24 @@ import numpy as np
 import pytest
 import xarray as xr
 
-from tests.hil.orca_hil import plotting, testkit
+from tests.hil.orca_hil import fixtures, plotting, testkit
 from tests.hil.orca_hil.analysis.gain import analyze_gain
 
 N_PULSES = 2000
 
 
 def sweeps(tier, fixture):
+    """{sweep: gains}, with TX gains limited to the fixture's power budget."""
     tx0, rx0 = fixture["rf_base"]["tx_gain"], fixture["rf_base"]["rx_gain"]
-    cap = fixture["safety"]["tx_gain_max"]
+    cap = min(fixture["safety"]["tx_gain_max"],
+              fixtures.max_safe_tx_gain(fixture, fixture["rf_base"]["freq"]) or -np.inf)
     if tier == "fast":
-        return {"tx": list(np.arange(tx0 - 12, tx0 + 12 + 1e-9, 6)), "rx": []}
-    return {"tx": list(np.arange(tx0 - 30, cap + 1e-9, 3)),
-            "rx": list(np.arange(rx0 - 20, rx0 + 15 + 1e-9, 5))}
+        tx = np.arange(tx0 - 12, tx0 + 12 + 1e-9, 6)
+        rx = []
+    else:
+        tx = np.arange(tx0 - 30, fixture["safety"]["tx_gain_max"] + 1e-9, 3)
+        rx = list(np.arange(rx0 - 20, rx0 + 15 + 1e-9, 5))
+    return {"tx": [float(g) for g in tx if g <= cap + 1e-9], "rx": rx}
 
 
 def plot_summary(reduced, run_id, status, path):

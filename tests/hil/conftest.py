@@ -13,7 +13,7 @@ from types import SimpleNamespace
 
 import pytest
 
-from tests.hil.orca_hil import REPO_ROOT, baseline_update, fixtures, scratch, telemetry, yamlio
+from tests.hil.orca_hil import REPO_ROOT, baseline_update, expect, fixtures, scratch, telemetry, yamlio
 from tests.hil.orca_hil.baselines import Baselines
 from tests.hil.orca_hil.metrics import MetricRecorder
 from tests.hil.orca_hil.thresholds import evaluate, load_thresholds
@@ -32,6 +32,8 @@ def pytest_addoption(parser):
                      "(default: the only file in tests/hil/fixtures/)")
     g.addoption("--setup-note", default=None,
                 help="describe an undeclared hardware change; the run is logged as non-standard")
+    g.addoption("--powered-on", default="",
+                help="comma-separated ids of the fixture's powered chain elements, confirming they are on")
     g.addoption("--update-baseline", action="store_true",
                 help="repeat the run --baseline-repeats times and rewrite the [base] baselines")
     g.addoption("--baseline-repeats", type=int, default=3)
@@ -75,6 +77,11 @@ def pytest_configure(config):
         raise pytest.UsageError(str(e))
     setup_note = config.getoption("--setup-note")
     standard = fixtures.is_standard(fixture) and not setup_note
+    check_setup(fixture, config.getoption("--powered-on"))
+    try:
+        expectation = expect.build(fixture, setup_note)
+    except fixtures.FixtureError as e:
+        raise pytest.UsageError(str(e))
     data_root = Path(fixture["host"]["data_root"]).expanduser()
     results_root = Path(config.getoption("--results-root") or data_root / "runs").expanduser()
     tier = config.getoption("--tier")
@@ -102,8 +109,45 @@ def pytest_configure(config):
         started=started, t0=time.time(), keep_raw=config.getoption("--keep-raw"),
         preflight_failed=None, fixture_suspect=False, test_status={}, configuration={},
         session_metrics=[], standard=standard, setup_note=setup_note,
-        fixture_sha256=fixtures.digest(fixture),
+        fixture_sha256=fixtures.digest(fixture), expectation=expectation,
+        setup=setup_summary(fixture, expectation),
     )
+
+
+def check_setup(fixture, powered_on):
+    """Refuse a session whose fixture is unsafe to run at its base settings or not confirmed."""
+    unsupported = fixtures.watchdog_elements(fixture)
+    if unsupported:
+        raise pytest.UsageError(f"chain elements {unsupported} need a watchdog, which the HIL harness "
+                                "does not support yet")
+    powered = set(fixtures.powered_elements(fixture))
+    confirmed = {x.strip() for x in powered_on.split(",") if x.strip()}
+    if powered != confirmed:
+        raise pytest.UsageError(f"powered chain elements {sorted(powered)}: confirm each is switched on with "
+                                f"--powered-on {','.join(sorted(powered))} (got {sorted(confirmed)})")
+    rf, att = fixture["rf_base"], (fixture.get("safety") or {}).get("attenuator_check") or {}
+    errors = []
+    for label, gain in (("rf_base", rf.get("tx_gain")), ("attenuator_check", att.get("tx_gain"))):
+        if gain is not None:
+            try:
+                errs, _ = fixtures.budget_problems(fixture, gain, rf["freq"])
+            except fixtures.FixtureError as e:
+                raise pytest.UsageError(str(e))
+            errors += [f"{label} tx_gain {gain:g}: {e}" for e in errs]
+    if errors:
+        raise pytest.UsageError("power budget:\n  " + "\n  ".join(errors))
+
+
+def setup_summary(fixture, expectation):
+    rf = fixture["rf_base"]
+    out = {"expectation": expectation.summary() if expectation else None,
+           "powered_elements": fixtures.powered_elements(fixture)}
+    if rf.get("tx_gain") is not None and (fixture.get("calibration") or {}).get("tx_power_table"):
+        out["power_budget_at_rf_base"] = [
+            {k: (round(v, 2) if isinstance(v, float) else v) for k, v in st.items()}
+            for st in fixtures.power_budget(fixture, rf["tx_gain"], rf["freq"])]
+        out["max_safe_tx_gain_at_rf_base_freq"] = fixtures.max_safe_tx_gain(fixture, rf["freq"])
+    return out
 
 
 def _test_id(item):
@@ -137,6 +181,9 @@ def pytest_collection_modifyitems(config, items):
 
 def pytest_runtest_setup(item):
     ctx = item.config._hil
+    if ctx and item.get_closest_marker("hardware") and ctx.expectation is not None:
+        if _test_id(item) in ctx.expectation.skip_tests:
+            pytest.skip(f"skip_tests in fixture {ctx.fixture_id}")
     if ctx and item.get_closest_marker("hardware") and not item.get_closest_marker("t00"):
         if ctx.preflight_failed:
             pytest.skip(f"preflight failed: {ctx.preflight_failed}")
@@ -221,6 +268,7 @@ def radar_build(hil, sdr_lock):
         "fixture": fx,
         "tier": hil.tier,
         "pytest_args": sys.argv[1:],
+        "setup": hil.setup,
     })
     write_configuration(hil)
     return build
@@ -246,7 +294,9 @@ def thresholds():
 
 @pytest.fixture(scope="session")
 def baselines(hil):
-    return Baselines(hil.fixture_id, hil.tier)
+    """This fixture's baselines; for an exploratory fixture, its commissioned reference's."""
+    ref = hil.expectation.ref if hil.expectation is not None and hil.expectation.ref else hil.fixture
+    return Baselines(ref["fixture_id"], hil.tier)
 
 
 @pytest.fixture
@@ -257,7 +307,8 @@ def recorder(request, hil, thresholds, baselines):
     out_dir.mkdir(parents=True, exist_ok=True)
     suspect = hil.fixture_suspect and tid in SUSPECT_IF_T03_FAILS
     rec = MetricRecorder(tid, thresholds, baselines, out_dir=out_dir, fixture_suspect=suspect,
-                         ignore_base=request.config.getoption("--update-baseline"))
+                         ignore_base=request.config.getoption("--update-baseline"),
+                         expectation=hil.expectation)
     sampler = telemetry.TelemetrySampler(out_dir / "telemetry.csv").start()
     rec.telemetry = sampler
 
@@ -304,6 +355,7 @@ def pytest_sessionfinish(session, exitstatus):
         "fixture_status": ctx.fixture["status"], "standard": ctx.standard,
         "fixture_extends": ctx.fixture.get("extends"), "fixture_judge": ctx.fixture.get("judge"),
         "fixture_sha256": ctx.fixture_sha256, "setup_note": ctx.setup_note,
+        "expectation": ctx.setup["expectation"],
         "pytest_args": sys.argv[1:], "status": overall, "fixture_suspect": ctx.fixture_suspect,
         "tests": dict(sorted(ctx.test_status.items())), "session_metrics": session_metrics,
     }, ctx.run_dir / "run.yaml")

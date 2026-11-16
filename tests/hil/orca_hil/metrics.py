@@ -23,11 +23,12 @@ class Measurement:
 
 class MetricRecorder:
     def __init__(self, test_id, thresholds, baselines=None, out_dir=None,
-                 fixture_suspect=False, ignore_base=False):
+                 fixture_suspect=False, ignore_base=False, expectation=None):
         """
         thresholds: output of ``thresholds.load_thresholds()``
         baselines: a ``baselines.Baselines`` (or None: every [base] metric is inconclusive)
         ignore_base: baseline-update mode; [base] metrics are recorded but not judged
+        expectation: an ``expect.Expectation`` for a non-standard setup, or None
         """
         self.test_id = test_id
         self.checks = {**thresholds.get("common", {}), **thresholds.get(test_id, {})}
@@ -36,6 +37,7 @@ class MetricRecorder:
         self.out_dir = out_dir
         self.fixture_suspect = fixture_suspect
         self.ignore_base = ignore_base
+        self.expectation = expectation
         self.records = []
         self.pre_finalize = []   # callables(recorder) run at the start of finalize()
         self.finalized = False
@@ -51,11 +53,28 @@ class MetricRecorder:
             if check.kind == "base" and self.baselines is not None:
                 baseline = self.baselines.get(self.test_id, name, case)
             ev = evaluate(value, check, baseline=baseline, params=params, k=self.k)
+            adj = (self.expectation.adjust(self.test_id, name, case, check)
+                   if self.expectation is not None else None)
+            expect_rec = None
+            if adj is not None and adj.reason:
+                expect_rec = {"reason": adj.reason, "unadjusted_status": ev.status,
+                              "unadjusted_lo": ev.lo, "unadjusted_hi": ev.hi}
+                if not adj.info and check.bound.get("type") == "equals":
+                    adj = type(adj)(info=True, reason=f"{adj.reason} (equals bound cannot be shifted)")
+                    expect_rec["reason"] = adj.reason
+                if adj.info:
+                    expect_rec["demoted_to_info"] = True
+                else:
+                    ev = evaluate(value, check, baseline=baseline, params=params, k=self.k,
+                                  shift=adj.shift, extra_tol=adj.extra_tol)
+                    expect_rec.update(shift=adj.shift, extra_tol=adj.extra_tol)
             status = ev.status
             if inconclusive and status != "info":
                 status = "inconclusive"
             if check.kind == "base" and self.ignore_base:
                 status = "inconclusive" if inconclusive else "info"
+            if expect_rec and expect_rec.get("demoted_to_info") and not inconclusive:
+                status = "info"
             rec = {"name": name}
             if case is not None:
                 rec["case"] = case
@@ -65,6 +84,8 @@ class MetricRecorder:
                 rec["baseline"] = baseline
             if note:
                 rec["note"] = note
+            if expect_rec:
+                rec["expect"] = expect_rec
             if self.fixture_suspect:
                 rec["fixture_suspect"] = True
             new.append(rec)

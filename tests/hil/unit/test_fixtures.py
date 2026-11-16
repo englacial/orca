@@ -135,3 +135,12 @@ def test_legacy_snapshot_converts_to_same_delay(base):
     fixtures.validate({**conv, "status": "commissioned"})
     assert fixtures.chain_delay_s(conv) == pytest.approx(fixtures.chain_delay_s(base))
     assert "cable" in legacy["hardware"]    # input not modified
+
+
+def test_bare_id_reuses_parent_element(tmp_path, base):
+    doc = {"fixture_id": "rx_lna", "extends": BASE_ID, "hardware": {"chain": ["pad30", "cable50", LNA]}}
+    fx = fixtures.load(write(tmp_path / "c.yaml", doc))
+    assert fx["hardware"]["chain"][:2] == base["hardware"]["chain"]
+    doc["hardware"]["chain"] = ["pad20"]
+    with pytest.raises(fixtures.FixtureError, match="not an element of the parent"):
+        fixtures.load(write(tmp_path / "d.yaml", doc))

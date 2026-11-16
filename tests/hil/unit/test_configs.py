@@ -8,8 +8,10 @@ from tests.hil.orca_hil import REPO_ROOT, configs, yamlio
 
 @pytest.fixture
 def fixture():
-    return {"safety": {"tx_gain_max": 75},
-            "rf_base": {"freq": 330e6, "tx_gain": 40, "rx_gain": 36}}
+    return {"fixture_id": "unit", "safety": {"tx_gain_max": 75, "rx_max_input_dbm": -15},
+            "rf_base": {"freq": 330e6, "tx_gain": 40, "rx_gain": 36},
+            "hardware": {"chain": [{"id": "pad", "type": "attenuator", "loss_db": 30}]},
+            "calibration": {"tx_power_table": [{"tx_gain": 60, "dbm": -5}]}}
 
 
 def test_deep_merge_does_not_mutate():

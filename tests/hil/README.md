@@ -34,22 +34,48 @@ are checked in `orca_hil/fixtures.py`). Numeric fields may be a frequency table
 a value came from.
 
 To test added parts, write a fixture that extends a commissioned one and restates
-the whole chain. It can live outside the repo and be passed by path:
+the whole chain; a bare id stands for the parent's element. It can live outside
+the repo and be passed by path:
 
 ```yaml
 fixture_id: loopback_50m_rx_lna
 extends: b206mini_pi5_loopback_50m
-judge: info                       # status defaults to exploratory
+judge: expect                     # info | expect; status defaults to exploratory
 hardware:
   chain:
-    - {id: pad30, type: attenuator, loss_db: 30}
-    - {id: cable50, type: cable, model: LMR-100, length_m: 50.0, velocity_factor: 0.66}
-    - {id: lna, type: amplifier, role: lna, gain_db: 20, nf_db: 1.0, max_input_dbm: 15, powered: true}
+    - pad30
+    - cable50
+    - {id: lna, type: amplifier, role: lna, gain_db: 20, gain_tol_db: 1, nf_db: 1.0,
+       p1db_out_dbm: 18, max_input_dbm: 15, powered: true}
+expect:                           # optional: <test>.<metric>[/<case>] or <test>.*
+  t01.noise_floor_dbfs: {shift: 12, tol: 3}        # or info / judge
+skip_tests: [t12]
 ```
+
+```bash
+make hil-fast HIL_ARGS="--fixture ~/radar-testbench/fixtures/loopback_50m_rx_lna.yaml --powered-on lna"
+```
+
+Such a fixture is judged against its commissioned reference's baselines.
+Metrics are tagged in `thresholds.yaml` (`affected_by`) with what a chain change
+does to them. With `judge: info`, every affected metric is recorded as info;
+with `judge: expect`, gain and delay changes predicted from the chain shift the
+limits (widened by the parts' tolerances) and the rest are info. Each adjusted
+metric in `metrics.yaml` keeps its unadjusted result. Details are in
+`orca_hil/expect.py`.
 
 Runs on a fixture without `status: commissioned`, or with `--setup-note`, get
 `-nonstd` in the run id and `standard: false` in `run.yaml`, and cannot update
 baselines.
+
+### Power budget
+
+Every capture's TX power (`calibration.tx_power_table`) is followed through the
+chain, and the capture is refused if any part's `max_input_dbm`, or the SDR's
+`safety.rx_max_input_dbm`, is exceeded less `safety.power_margin_db`, or a
+limiter would limit (unless `safety.allow_limiting`). T8 and T12 skip the gains
+and frequencies that fail. Powered parts must be confirmed with
+`--powered-on <ids>`; parts with `watchdog` set are refused.
 
 ## UHD
 

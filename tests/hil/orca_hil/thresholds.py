@@ -22,6 +22,9 @@ DEFAULT_K = 4.0
 ABS_TYPES = {"range", "range_about", "max", "min", "abs_max", "equals"}
 BASE_TYPES = {"two_sided", "lower", "upper", "ratio_upper", "factor_two_sided"}
 KINDS = {"abs", "base", "info"}
+SHIFT_TAGS = {"gain", "-gain", "gain_atten_check", "delay", "snr_db"}
+INFO_TAGS = {"noise", "linearity", "bandwidth", "spectral", "phase", "snr"}
+TAGS = SHIFT_TAGS | INFO_TAGS
 
 
 @dataclass
@@ -29,6 +32,7 @@ class Check:
     kind: str
     units: str | None
     bound: dict = field(default_factory=dict)
+    affected_by: tuple = ()
 
 
 @dataclass
@@ -50,7 +54,8 @@ def load_thresholds(path=THRESHOLDS_PATH) -> dict:
             specs = spec if isinstance(spec, list) else [spec]
             checks = []
             for s in specs:
-                check = Check(kind=s["kind"], units=s.get("units"), bound=dict(s.get("bound") or {}))
+                check = Check(kind=s["kind"], units=s.get("units"), bound=dict(s.get("bound") or {}),
+                              affected_by=tuple(s.get("affected_by") or ()))
                 validate_check(f"{test_id}.{name}", check)
                 checks.append(check)
             out[test_id][name] = checks
@@ -60,9 +65,14 @@ def load_thresholds(path=THRESHOLDS_PATH) -> dict:
 def validate_check(label, check: Check):
     if check.kind not in KINDS:
         raise ValueError(f"{label}: unknown kind {check.kind!r}")
+    unknown = set(check.affected_by) - TAGS
+    if unknown:
+        raise ValueError(f"{label}: unknown affected_by tags {sorted(unknown)}")
     if check.kind == "info":
         return
     btype = check.bound.get("type")
+    if btype in ("equals", "ratio_upper", "factor_two_sided") and set(check.affected_by) & SHIFT_TAGS:
+        raise ValueError(f"{label}: a {btype} bound cannot take shift tags {sorted(SHIFT_TAGS)}")
     allowed = ABS_TYPES if check.kind == "abs" else BASE_TYPES
     if btype not in allowed:
         raise ValueError(f"{label}: bound type {btype!r} is not valid for kind {check.kind!r}")
@@ -81,13 +91,17 @@ def resolve(bound: dict, params: dict) -> dict:
 
 
 def evaluate(value, check: Check, baseline: dict | None = None, params: dict | None = None,
-             k: float = DEFAULT_K) -> Evaluation:
+             k: float = DEFAULT_K, shift: float = 0.0, extra_tol: float = 0.0) -> Evaluation:
+    """Judge ``value``. ``shift`` moves both limits and ``extra_tol`` widens them
+    (expected changes from a non-standard RF chain); not valid for ``equals``."""
     if check.kind == "info":
         return Evaluation("info", {})
     b = resolve(check.bound, params or {})
     btype = b["type"]
 
     if btype == "equals":
+        if shift or extra_tol:
+            raise ValueError("an equals bound cannot be shifted")
         return Evaluation("pass" if value == b["value"] else "fail", b)
 
     if value is None or not math.isfinite(float(value)):
@@ -122,5 +136,7 @@ def evaluate(value, check: Check, baseline: dict | None = None, params: dict | N
         else:  # abs_max
             lo, hi = -float(b["value"]), float(b["value"])
 
+    lo = None if lo is None else lo + shift - extra_tol
+    hi = None if hi is None else hi + shift + extra_tol
     ok = (lo is None or v >= lo) and (hi is None or v <= hi)
     return Evaluation("pass" if ok else "fail", b, lo, hi)

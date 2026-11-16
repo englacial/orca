@@ -33,11 +33,16 @@ def baseline_mean(baselines, test_id, name, case=None):
     return None if b is None else b["mean"]
 
 
-def loopback_index_from_baseline(baselines):
-    """Expected loopback position (compressed samples) from the T1 baseline, or None."""
+def loopback_index_from_baseline(baselines, expectation=None):
+    """Expected loopback position (compressed samples) from the T1 baseline, or None.
+
+    With an expectation (non-standard chain), shifted by the chain's delay change.
+    """
     t1 = baseline_mean(baselines, "t01", "leakage_peak_index")
     sep = baseline_mean(baselines, "t01", "peak_separation_samples")
-    return None if t1 is None or sep is None else t1 + sep
+    if t1 is None or sep is None:
+        return None
+    return t1 + sep + (expectation.delay_shift_samples() if expectation is not None else 0.0)
 
 
 def repo_path(rel):

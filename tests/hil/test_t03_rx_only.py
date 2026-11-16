@@ -58,7 +58,7 @@ def test_t03_rx_only(hil, tier, fixture_cfg, capture_manager, recorder, baseline
     cap = capture_manager.acquire("t03", "rx_only", {"RF0": {"transmit": False},
                                                      "CHIRP": {"num_pulses": p["n_pulses"]}})
     params = {"baseline_lines": baselines.get_raw("t03", "narrowband_lines"),
-              "loopback_index": testkit.loopback_index_from_baseline(baselines)}
+              "loopback_index": testkit.loopback_index_from_baseline(baselines, hil.expectation)}
     reduced, ms = analyze_rx_only(cap.zarr, fixture_cfg, params)
     recorder.record_all(ms)
     testkit.finish(hil, recorder, tier, reduced, [cap], {

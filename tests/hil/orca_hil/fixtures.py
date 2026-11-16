@@ -8,7 +8,8 @@ parent's, so a child that changes the RF chain restates all of it.
 
 ``status: commissioned`` marks a fixture with its own baselines; anything else is
 ``exploratory`` and its runs are logged as non-standard. These keys are never
-inherited: status, judge, expect, skip_tests, description.
+inherited: status, judge, expect, skip_tests, description. In a child's chain,
+a bare id (``- cable50``) stands for the parent's element with that id.
 """
 import copy
 import hashlib
@@ -29,7 +30,8 @@ JUDGE_MODES = ("info", "expect")
 NOT_INHERITED = ("status", "judge", "expect", "skip_tests", "description")
 
 # Per type: required fields, optional fields. Every element may also have the COMMON fields.
-COMMON_FIELDS = {"id", "type", "model", "serial", "source", "delay_ns", "max_input_dbm", "notes"}
+COMMON_FIELDS = {"id", "type", "model", "serial", "source", "delay_ns", "delay_tol_ns", "max_input_dbm",
+                 "notes"}
 ELEMENT_FIELDS = {
     "cable": ({"length_m", "velocity_factor"}, {"loss_db", "loss_db_per_100m"}),
     "adapter": (set(), {"loss_db"}),
@@ -95,7 +97,23 @@ def _load_raw(path, seen):
     parent = {k: v for k, v in parent.items() if k not in NOT_INHERITED}
     merged = _merge(parent, raw)
     merged["extends"] = parent.get("fixture_id", parent_ref)
+    child_chain = (raw.get("hardware") or {}).get("chain")
+    if child_chain is not None:
+        merged["hardware"]["chain"] = _resolve_chain(path.name, child_chain, parent)
     return merged, [path] + chain
+
+
+def _resolve_chain(label, chain, parent):
+    """A bare id in a child's chain stands for the parent's element with that id."""
+    by_id = {el["id"]: el for el in (parent.get("hardware") or {}).get("chain") or []}
+    out = []
+    for el in chain:
+        if isinstance(el, str):
+            if el not in by_id:
+                raise FixtureError(f"{label}: chain entry {el!r} is not an element of the parent")
+            el = copy.deepcopy(by_id[el])
+        out.append(el)
+    return out
 
 
 def load(path):
@@ -145,6 +163,15 @@ def validate(fx):
     hw = fx.get("hardware") or {}
     if "chain" not in hw:
         raise FixtureError(f"{fid}: hardware.chain is required")
+    table = (fx.get("calibration") or {}).get("tx_power_table")
+    if table is not None:
+        try:
+            gains = [float(r["tx_gain"]) for r in table] + [float(r["dbm"]) for r in table]
+        except (TypeError, KeyError, ValueError):
+            raise FixtureError(f"{fid}: calibration.tx_power_table must be a list of {{tx_gain, dbm}}")
+        g = gains[:len(table)]
+        if not table or any(b <= a for a, b in zip(g, g[1:])):
+            raise FixtureError(f"{fid}: calibration.tx_power_table tx_gain must increase")
     ids = set()
     for i, el in enumerate(hw["chain"] or []):
         validate_element(f"{fid}: chain[{i}]", el)
@@ -229,3 +256,134 @@ def chain_delay_s(fixture, freq_hz=None):
     """Total propagation delay of hardware.chain (cables plus each element's delay_ns)."""
     f = fixture["rf_base"]["freq"] if freq_hz is None else freq_hz
     return sum(element_delay_s(el, f) for el in fixture["hardware"]["chain"])
+
+
+def element_gain_db(el, freq_hz):
+    """Gain of one element in dB (negative for a loss), or None where it is not known.
+
+    A filter's scalar loss_db applies only inside passband_mhz; outside it the
+    loss is unknown unless loss_db is a table that covers freq_hz.
+    """
+    t = el["type"]
+    if t == "amplifier":
+        return value_at(el["gain_db"], freq_hz)
+    if t == "filter" and el.get("passband_mhz") and not _table_covers(el["loss_db"], freq_hz):
+        lo, hi = el["passband_mhz"]
+        if not lo <= freq_hz / 1e6 <= hi:
+            return None
+    if t == "cable" and "loss_db" not in el:
+        return -value_at(el.get("loss_db_per_100m"), freq_hz) * float(el["length_m"]) / 100.0
+    return -value_at(el.get("loss_db"), freq_hz)
+
+
+def _table_covers(v, freq_hz):
+    return isinstance(v, dict) and v["freq_mhz"][0] <= freq_hz / 1e6 <= v["freq_mhz"][-1]
+
+
+def element_tol_db(el, freq_hz):
+    return abs(value_at(el.get("gain_tol_db", el.get("loss_tol_db")), freq_hz))
+
+
+def chain_gain_db(fixture, freq_hz=None):
+    """Net gain of hardware.chain in dB, or None if any element's gain is unknown at freq_hz."""
+    f = fixture["rf_base"]["freq"] if freq_hz is None else freq_hz
+    gains = [element_gain_db(el, f) for el in fixture["hardware"]["chain"]]
+    return None if any(g is None for g in gains) else sum(gains)
+
+
+# ---------------------------------------------------------------- power budget
+#
+# Power is followed from the SDR TX port through the chain at the chirp's peak
+# envelope, assuming every element is linear (amplifiers do not saturate and
+# limiters do not limit), which overestimates the power after them. Unknown
+# losses (a filter outside its passband) count as 0 dB. Each limit is reduced
+# by safety.power_margin_db.
+
+DEFAULT_POWER_MARGIN_DB = 3.0
+DEFAULT_LINEAR_MARGIN_DB = 3.0
+
+
+def tx_power_dbm(fixture, tx_gain):
+    """SDR TX output (dBm) from calibration.tx_power_table, extrapolated at 1 dB/dB."""
+    table = (fixture.get("calibration") or {}).get("tx_power_table")
+    if not table:
+        raise FixtureError(f"{fixture['fixture_id']}: calibration.tx_power_table is needed for the power budget")
+    g, p = [float(r["tx_gain"]) for r in table], [float(r["dbm"]) for r in table]
+    if tx_gain < g[0]:
+        return p[0] - (g[0] - tx_gain)
+    if tx_gain > g[-1]:
+        return p[-1] + (tx_gain - g[-1])
+    return float(np.interp(tx_gain, g, p))
+
+
+def power_budget(fixture, tx_gain, freq_hz):
+    """[{id, type, input_dbm, output_dbm}] for each element, then {id: 'sdr_rx', input_dbm}."""
+    p = tx_power_dbm(fixture, tx_gain)
+    stages = []
+    for el in fixture["hardware"]["chain"]:
+        g = element_gain_db(el, freq_hz)
+        out = p + (0.0 if g is None else g)
+        stages.append({"id": el["id"], "type": el["type"], "input_dbm": p, "output_dbm": out})
+        p = out
+    stages.append({"id": "sdr_rx", "type": "sdr", "input_dbm": p, "output_dbm": None})
+    return stages
+
+
+def budget_problems(fixture, tx_gain, freq_hz):
+    """(errors, nonlinear) at tx_gain and freq_hz.
+
+    errors: limits exceeded (an element's max_input_dbm, the SDR's
+    safety.rx_max_input_dbm, a limiter driven into limiting unless
+    safety.allow_limiting). nonlinear: elements within safety.linear_margin_db
+    of compression (amplifier p1db_out_dbm) or of a limiter's threshold.
+    """
+    safety = fixture.get("safety") or {}
+    margin = float(safety.get("power_margin_db", DEFAULT_POWER_MARGIN_DB))
+    lin_margin = float(safety.get("linear_margin_db", DEFAULT_LINEAR_MARGIN_DB))
+    errors, nonlinear = [], []
+    els = {el["id"]: el for el in fixture["hardware"]["chain"]}
+    for st in power_budget(fixture, tx_gain, freq_hz):
+        pin = st["input_dbm"]
+        if st["id"] == "sdr_rx":
+            lim = safety.get("rx_max_input_dbm")
+            if lim is None:
+                errors.append("safety.rx_max_input_dbm is not set")
+            elif pin > lim - margin:
+                errors.append(f"SDR RX input {pin:.1f} dBm > {lim} dBm - {margin:g} dB margin")
+            continue
+        el = els[st["id"]]
+        if el.get("max_input_dbm") is not None:
+            lim = value_at(el["max_input_dbm"], freq_hz)
+            if pin > lim - margin:
+                errors.append(f"{el['id']} input {pin:.1f} dBm > max_input {lim:g} dBm - {margin:g} dB margin")
+        if el["type"] == "limiter":
+            thr = value_at(el["threshold_dbm"], freq_hz)
+            if pin > thr - lin_margin:
+                if not safety.get("allow_limiting"):
+                    errors.append(f"limiter {el['id']} input {pin:.1f} dBm is within {lin_margin:g} dB of its "
+                                  f"{thr:g} dBm threshold (set safety.allow_limiting to permit)")
+                nonlinear.append(el["id"])
+        if el["type"] == "amplifier" and el.get("p1db_out_dbm") is not None:
+            if st["output_dbm"] > value_at(el["p1db_out_dbm"], freq_hz) - lin_margin:
+                nonlinear.append(el["id"])
+    return errors, nonlinear
+
+
+def max_safe_tx_gain(fixture, freq_hz, lo=0.0, hi=None, step=0.5):
+    """Highest tx_gain on a `step` grid in [lo, hi] with no budget errors, or None."""
+    hi = float((fixture.get("safety") or {}).get("tx_gain_max", 89.8)) if hi is None else hi
+    best = None
+    grid = [float(g) for g in np.arange(lo, hi, step)] + [hi]
+    for g in grid:
+        if budget_problems(fixture, g, freq_hz)[0]:
+            break
+        best = g
+    return best
+
+
+def powered_elements(fixture):
+    return [el["id"] for el in fixture["hardware"]["chain"] if el.get("powered")]
+
+
+def watchdog_elements(fixture):
+    return [el["id"] for el in fixture["hardware"]["chain"] if el.get("watchdog")]

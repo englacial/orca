@@ -4,6 +4,7 @@ import os
 from pathlib import Path
 
 from . import REPO_ROOT, yamlio
+from .fixtures import FixtureError, budget_problems
 
 # Section 2.3 of the HIL plan: values applied over config/default.yaml's structure.
 BASE_OVERRIDES = {
@@ -68,6 +69,12 @@ def validate(cfg: dict, fixture: dict):
             errors.append(f"RF0.{key} is not set (fixture not commissioned and no override)")
     if rf.get("tx_gain") is not None and tx_gain_max is not None and rf["tx_gain"] > tx_gain_max:
         errors.append(f"RF0.tx_gain {rf['tx_gain']} exceeds safety.tx_gain_max {tx_gain_max}")
+    if rf.get("tx_gain") is not None and rf.get("transmit", True):
+        try:
+            errors += [f"power budget: {e}" for e in
+                       budget_problems(fixture, float(rf["tx_gain"]), float(rf["freq"]))[0]]
+        except FixtureError as e:
+            errors.append(f"power budget: {e}")
     if gen["out_file"] != files["chirp_loc"]:
         errors.append(f"GENERATE.out_file {gen['out_file']!r} != FILES.chirp_loc {files['chirp_loc']!r}")
     for section, key in (("CHIRP", "rx_duration"), ("GENERATE", "chirp_length"),
