@@ -346,6 +346,45 @@ int UHD_SAFE_MAIN(int argc, char *argv[]) {
   cout << "INFO: Number of RX samples: " << num_rx_samps << endl << endl;  //needs to be after chirp and sdr object are both made
   cout_mutex.unlock();
  
+  // GPS setup, before the stream start time is set and the TX thread starts
+  cout_mutex.lock();
+  printf("Starting GPS code...\n");
+  cout_mutex.unlock();
+  using namespace boost::asio;
+
+  io_context io;
+  serial_port serial(io);
+  // Only touch the serial port when the GPS is used: configuring it takes ~1.3 s
+  bool using_gps = (sdr.getClkRef() == "gpsdo");
+
+  // TODO: Consider using a library for working with GPS;
+  if (using_gps) try {
+    cout_mutex.lock();
+    printf("Opening serial port...\n");
+    cout_mutex.unlock();
+    serial.open("/dev/ttyACM0");  // Adjust if needed for your system
+  } catch (boost::system::system_error err) {
+    cout_mutex.lock();
+    printf("Failed to open GPS.\n");
+    cout_mutex.unlock();
+    using_gps = false;
+  }
+
+  if (using_gps) {
+    cout_mutex.lock();
+    printf("Serial port opened.\n");
+    cout_mutex.unlock();
+    serial.set_option(serial_port_base::baud_rate(115200));
+    serial.set_option(serial_port_base::character_size(8));
+    serial.set_option(serial_port_base::parity(serial_port_base::parity::none));
+    serial.set_option(serial_port_base::stop_bits(serial_port_base::stop_bits::one));
+    serial.set_option(serial_port_base::flow_control(serial_port_base::flow_control::none));
+    
+    // Send UBX commands to configure GPS
+    configureRate(serial, 3);              // 3 Hz update rate
+    configureNMEAMessages(serial, 1);      // Enable only GGA
+  }
+
   // update the offset time for start of streaming to be offset from the current usrp time
   chirp.setTimeOffset(chirp.getTimeOffset() + time_spec_t(sdr.getUsrp()->get_time_now()).get_real_secs());  //needs to be after chirp and sdr object are both made
 
@@ -437,44 +476,6 @@ int UHD_SAFE_MAIN(int argc, char *argv[]) {
 
   float inversion_phase; // Store phase to use for phase inversion of this chirp
   
-  //Creating GPS log & vars
-  cout_mutex.lock();
-  printf("Starting GPS code...\n");
-  cout_mutex.unlock();
-  using namespace boost::asio;
-
-  io_context io;
-  serial_port serial(io);
-  bool using_gps = true;
-
-  // TODO: Consider using a library for working with GPS;
-  try {
-    cout_mutex.lock();
-    printf("Opening serial port...\n");
-    cout_mutex.unlock();
-    serial.open("/dev/ttyACM0");  // Adjust if needed for your system
-  } catch (boost::system::system_error err) {
-    cout_mutex.lock();
-    printf("Failed to open GPS.\n");
-    cout_mutex.unlock();
-    using_gps = false;
-  }
-
-  if (using_gps) {
-    cout_mutex.lock();
-    printf("Serial port opened.\n");
-    cout_mutex.unlock();
-    serial.set_option(serial_port_base::baud_rate(115200));
-    serial.set_option(serial_port_base::character_size(8));
-    serial.set_option(serial_port_base::parity(serial_port_base::parity::none));
-    serial.set_option(serial_port_base::stop_bits(serial_port_base::stop_bits::one));
-    serial.set_option(serial_port_base::flow_control(serial_port_base::flow_control::none));
-    
-    // Send UBX commands to configure GPS
-    configureRate(serial, 3);              // 3 Hz update rate
-    configureNMEAMessages(serial, 1);      // Enable only GGA
-  }
-
   ofstream gps_output("gps_log.txt");
 
   std::string line;
