@@ -33,6 +33,17 @@ def baseline_mean(baselines, test_id, name, case=None):
     return None if b is None else b["mean"]
 
 
+def leakage_index_from_baseline(baselines, expectation=None):
+    """Expected internal-leakage position (compressed samples) from the T1 baseline, or None.
+
+    With an expectation (non-standard setup), shifted by the change in TX/RX timing.
+    """
+    t1 = baseline_mean(baselines, "t01", "leakage_peak_index")
+    if t1 is None:
+        return None
+    return t1 + (expectation.timing_shift_samples() if expectation is not None else 0.0)
+
+
 def loopback_index_from_baseline(baselines, expectation=None):
     """Expected loopback position (compressed samples) from the T1 baseline, or None.
 

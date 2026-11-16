@@ -11,13 +11,15 @@ from .peaks import ChirpResponse, fit_two_peaks, leakage_removed, mainlobe_metri
 UP = 8
 
 
-def locate_peaks(ds, fixture, chirp=None):
-    """Stacked profile, response model and two-peak fit for a loopback capture."""
+def locate_peaks(ds, fixture, chirp=None, expected_leak=None):
+    """Stacked profile, response model and two-peak fit for a loopback capture.
+
+    expected_leak: expected internal-leakage position (samples), see find_loopback_peaks."""
     cfg = ds.attrs["config"]
     chirp = reference_chirp(cfg) if chirp is None else chirp
     prof = stacked_profile(ds, chirp)
     exp_sep = expected_separation_samples(fixture, sample_rate(ds))
-    p1, p2 = find_loopback_peaks(np.abs(upsample(prof, UP)) ** 2, exp_sep, up=UP)
+    p1, p2 = find_loopback_peaks(np.abs(upsample(prof, UP)) ** 2, exp_sep, up=UP, expected_leak=expected_leak)
     resp = ChirpResponse(chirp)
     fit = fit_two_peaks(prof, resp, p1, p2)
     return prof, resp, fit, exp_sep
@@ -40,7 +42,7 @@ def analyze_profile(capture, fixture, params=None):
     cfg = ds.attrs["config"]
     chirp = reference_chirp(cfg)
     lc = len(chirp)
-    prof, resp, fit, exp_sep = locate_peaks(ds, fixture, chirp)
+    prof, resp, fit, exp_sep = locate_peaks(ds, fixture, chirp, (params or {}).get("expected_leak"))
 
     nstart = noise_window_start(fit.t2, lc)
     peaks, noise = single_pulse_stats(ds, chirp, fit.t2, nstart)

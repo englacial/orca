@@ -17,7 +17,7 @@ import numpy as np
 import pytest
 import xarray as xr
 
-from tests.hil.orca_hil import REPO_ROOT, plotting, radar, yamlio
+from tests.hil.orca_hil import REPO_ROOT, plotting, radar, testkit, yamlio
 from tests.hil.orca_hil.analysis.profile import analyze_profile
 from tests.hil.orca_hil.metrics import Measurement
 from tests.hil.orca_hil.reduced import write_reduced
@@ -160,7 +160,7 @@ def plot_raw_pulse(zarr_path, run_id, status, path):
 @pytest.mark.full
 @pytest.mark.t01
 @pytest.mark.timeout(900)
-def test_t01_end_to_end(hil, tier, fixture_cfg, radar_build, capture_manager, recorder):
+def test_t01_end_to_end(hil, tier, fixture_cfg, radar_build, capture_manager, recorder, baselines):
     p = PARAMS[tier]
     fx = fixture_cfg
     out = hil.run_dir / "t01"
@@ -168,7 +168,8 @@ def test_t01_end_to_end(hil, tier, fixture_cfg, radar_build, capture_manager, re
     # a: harness runner + range profile
     a = capture_manager.acquire("t01", "a_profile", {"CHIRP": {"num_pulses": p["n_profile"]}})
     recorder.record_all(pipeline_checks(a, p["n_profile"]))
-    reduced, profile_ms = analyze_profile(a.zarr, fx)
+    reduced, profile_ms = analyze_profile(
+        a.zarr, fx, {"expected_leak": testkit.leakage_index_from_baseline(baselines, hil.expectation)})
     recorder.record_all(profile_ms)
 
     # b: run.py (rebuilds sdr/build with cmake/make from inside the conda env)

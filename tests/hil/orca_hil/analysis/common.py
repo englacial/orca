@@ -75,13 +75,16 @@ def interp_complex(x, pos, half_taps=16, beta=8.0):
     return np.tensordot(x[..., idx], w, axes=([-1], [0]))
 
 
-def find_loopback_peaks(power, expected_sep=None, min_sep=4.0, up=1, sep_tol=3.0):
+def find_loopback_peaks(power, expected_sep=None, min_sep=4.0, up=1, sep_tol=3.0, expected_leak=None):
     """Locate the internal-leakage and loopback peaks in a power profile.
 
     ``power`` may be upsampled by ``up``. The global maximum is one of the two
     peaks. The other is the strongest local maximum within sep_tol samples of
     expected_sep away from it (either side), or, without expected_sep, at least
     min_sep away. The earlier peak is the internal leakage (shorter path).
+    With ``expected_leak`` (samples), only the side that puts the leakage nearer
+    to it is searched, so a leakage peak buried in noise is not replaced by a
+    noise peak on the other side.
     Returns (leakage_pos, loopback_pos) in (non-upsampled) samples.
     """
     p = np.asarray(power)
@@ -92,6 +95,14 @@ def find_loopback_peaks(power, expected_sep=None, min_sep=4.0, up=1, sep_tol=3.0
     dist = np.abs(peaks - top) / up
     if expected_sep is not None:
         ok = np.abs(dist - expected_sep) <= sep_tol
+        if expected_leak is not None:
+            # top is the loopback if it is nearer expected_leak + expected_sep than expected_leak
+            top_is_loopback = abs(top / up - (expected_leak + expected_sep)) < abs(top / up - expected_leak)
+            ok &= (peaks < top) if top_is_loopback else (peaks > top)
+            if not ok.any():   # partner below the noise: put it at the expected separation
+                other = top - expected_sep * up if top_is_loopback else top + expected_sep * up
+                a, b = sorted((top, other))
+                return a / up, b / up
     else:
         ok = dist >= min_sep
     if not ok.any():

@@ -141,3 +141,17 @@ def test_tx_lead_shifts_absolute_indices(tmp_path, spec):
     from tests.hil.orca_hil.thresholds import load_thresholds
     chk = load_thresholds()["t01"]["leakage_peak_index"][0]
     assert e.adjust("t01", "leakage_peak_index", None, chk).shift == pytest.approx(-84)
+
+
+def test_peak_pairing_with_buried_leakage():
+    import numpy as np
+    from tests.hil.orca_hil.analysis.common import find_loopback_peaks
+    rng = np.random.default_rng(1)
+    p = rng.exponential(1e-3, 400)
+    p[91] = 1.0                 # loopback, much stronger than the leakage
+    p[106] = 5e-2               # a spurious peak 15 samples after it
+    p[76] = 2e-2                # leakage, weaker than the spurious peak
+    assert find_loopback_peaks(p, 15.0)[1] == 106          # without the hint: mis-paired
+    assert find_loopback_peaks(p, 15.0, expected_leak=75.0) == (76, 91)
+    p[70:85] = 1e-4             # leakage fully buried: placed at the expected separation
+    assert find_loopback_peaks(p, 15.0, expected_leak=75.0) == (76.0, 91)

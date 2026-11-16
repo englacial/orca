@@ -7,7 +7,7 @@ from pathlib import Path
 import pytest
 
 from tests.hil.conftest import write_configuration
-from tests.hil.orca_hil import radar
+from tests.hil.orca_hil import radar, testkit
 from tests.hil.orca_hil.analysis.common import db10
 from tests.hil.orca_hil.analysis.profile import locate_peaks
 from tests.hil.orca_hil.analysis.common import open_capture
@@ -82,7 +82,7 @@ def run_cxx_hw_tests(fixture):
 @pytest.mark.full
 @pytest.mark.t00
 @pytest.mark.timeout(1500)
-def test_t00_preflight(hil, tier, fixture_cfg, radar_build, capture_manager, recorder):
+def test_t00_preflight(hil, tier, fixture_cfg, radar_build, capture_manager, recorder, baselines):
     from tests.hil.orca_hil import telemetry
     params = PARAMS[tier]
     fx = fixture_cfg
@@ -125,9 +125,13 @@ def test_t00_preflight(hil, tier, fixture_cfg, radar_build, capture_manager, rec
     else:
         cap = capture_manager.acquire("t00", "attenuator_check", {
             "RF0": {"tx_gain": att["tx_gain"]}, "CHIRP": {"num_pulses": ATTEN_CHECK_PULSES}})
-        _, _, fit, _ = locate_peaks(open_capture(cap.zarr), fx)
+        leak = testkit.leakage_index_from_baseline(baselines, hil.expectation)
+        _, _, fit, _ = locate_peaks(open_capture(cap.zarr), fx, expected_leak=leak)
         peak = float(db10(abs(fit.a2) ** 2))
         recorder.record("attenuator_check_peak_dbfs", peak)
+        # The abort uses the stronger of the two fitted peaks, so a mis-paired fit cannot hide
+        # a strong signal (the loopback is normally the stronger one)
+        strongest = float(db10(max(abs(fit.a1), abs(fit.a2)) ** 2))
         # Non-standard chain: the reference fixture's expected peak plus the declared chain's
         # (linear) gain change, so this also checks the chain is wired as declared
         exp_obj, shift, extra = hil.expectation, 0.0, 0.0
@@ -138,9 +142,9 @@ def test_t00_preflight(hil, tier, fixture_cfg, radar_build, capture_manager, rec
         else:
             expected = att.get("expected_peak_dbfs")
         limit_db = att["tolerance_db"] + extra
-        if expected is not None and peak > expected + shift + limit_db:
+        if expected is not None and strongest > expected + shift + limit_db:
             recorder.finalize(fail=False)
-            pytest.exit(f"ABORT: loopback peak {peak:.1f} dBFS at tx_gain {att['tx_gain']} is more than "
+            pytest.exit(f"ABORT: loopback peak {strongest:.1f} dBFS at tx_gain {att['tx_gain']} is more than "
                         f"{limit_db:g} dB above the expected {expected + shift:.1f} dBFS "
                         f"(chain gain change {shift:+.1f} dB); an attenuator may be missing or the "
                         "chain is not as declared in the fixture", returncode=3)
