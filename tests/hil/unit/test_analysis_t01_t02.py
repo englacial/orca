@@ -1,6 +1,7 @@
 import numpy as np
 import pytest
 
+from tests.hil.orca_hil import fixtures
 from tests.hil.orca_hil.analysis.profile import analyze_profile
 from tests.hil.orca_hil.analysis.sidelobes import analyze_sidelobes
 from tests.hil.orca_hil.configs import deep_merge
@@ -22,7 +23,8 @@ def test_t01_recovers_injected_profile(radar_cfg, fixture_cfg, make_capture):
 
     assert m[("leakage_peak_index", None)].value == pytest.approx(159.0, abs=0.05)
     assert m[("peak_separation_samples", None)].value == pytest.approx(14.25, abs=0.05)
-    assert m[("peak_separation_samples", None)].params["expected"] == pytest.approx(14.15, abs=0.01)
+    assert m[("peak_separation_samples", None)].params["expected"] == pytest.approx(
+        fixtures.chain_delay_s(fixture_cfg) * 56e6, abs=0.01)
     assert m[("loopback_to_leakage_ratio_db", None)].value == pytest.approx(
         20 * np.log10(abs(a_b / a_l)), abs=0.3)
     assert m[("loopback_peak_power_dbfs", None)].value == pytest.approx(-60.0, abs=0.1)
