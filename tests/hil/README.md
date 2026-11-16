@@ -30,7 +30,7 @@ undeclared hardware change; the run is marked non-standard).
 A fixture's `hardware.chain` lists the RF parts from SDR TX to SDR RX in order
 (types `cable`, `adapter`, `attenuator`, `limiter`, `filter`, `amplifier`; fields
 are checked in `orca_hil/fixtures.py`). Numeric fields may be a frequency table
-`{freq_mhz: [...], value: [...]}`, and `source: datasheet|measured` records where
+`{freq_mhz: [...], value: [...]}`, and `source: datasheet|measured|estimate` records where
 a value came from.
 
 To test added parts, write a fixture that extends a commissioned one and restates

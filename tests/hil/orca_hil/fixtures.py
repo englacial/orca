@@ -41,7 +41,7 @@ ELEMENT_FIELDS = {
     "amplifier": ({"role", "gain_db"}, {"gain_tol_db", "nf_db", "p1db_out_dbm", "powered", "supply",
                                         "watchdog"}),
 }
-SOURCES = ("datasheet", "measured")
+SOURCES = ("datasheet", "measured", "estimate")
 AMP_ROLES = ("lna", "pa")
 # Fields that may be a number or a frequency table {freq_mhz: [...], value: [...]}
 FREQ_FIELDS = {"loss_db", "loss_db_per_100m", "loss_tol_db", "gain_db", "gain_tol_db", "nf_db",
