@@ -29,12 +29,14 @@ def test_base_fixture_is_commissioned_with_cable_delay(base):
     assert base["status"] == "commissioned"
     assert "judge" not in base and "extends" not in base
     assert fixtures.is_standard(base)
-    assert fixtures.chain_delay_s(base) == pytest.approx(50.0 / (0.66 * fixtures.C0))
+    cables = [el for el in base["hardware"]["chain"] if el["type"] == "cable"]
+    assert fixtures.chain_delay_s(base) == pytest.approx(
+        sum(el["length_m"] / (el["velocity_factor"] * fixtures.C0) for el in cables))
 
 
-def test_expected_separation_unchanged_from_cable_formula(base):
+def test_expected_separation_is_chain_delay(base):
     fs = 56e6
-    assert expected_separation_samples(base, fs) == pytest.approx(50.0 / (0.66 * 299792458.0) * fs)
+    assert expected_separation_samples(base, fs) == pytest.approx(fixtures.chain_delay_s(base) * fs)
 
 
 def test_child_inherits_parent_and_replaces_chain(tmp_path, base, child_doc):
@@ -42,7 +44,7 @@ def test_child_inherits_parent_and_replaces_chain(tmp_path, base, child_doc):
     assert fx["fixture_id"] == "rx_lna" and fx["extends"] == BASE_ID
     assert fx["host"] == base["host"] and fx["rf_base"] == base["rf_base"]
     assert fx["hardware"]["sdr_serial"] == base["hardware"]["sdr_serial"]
-    assert [e["id"] for e in fx["hardware"]["chain"]] == ["pad30", "cable50", "lna"]
+    assert [e["id"] for e in fx["hardware"]["chain"]] == [e["id"] for e in base["hardware"]["chain"]] + ["lna"]
     assert fx["status"] == "exploratory" and fx["judge"] == "info"   # status is not inherited
     assert not fixtures.is_standard(fx)
     assert fixtures.parent(fx)["fixture_id"] == BASE_ID
@@ -133,14 +135,15 @@ def test_legacy_snapshot_converts_to_same_delay(base):
     conv = fixtures.from_legacy(legacy)
     assert [e["type"] for e in conv["hardware"]["chain"]] == ["attenuator", "cable"]
     fixtures.validate({**conv, "status": "commissioned"})
-    assert fixtures.chain_delay_s(conv) == pytest.approx(fixtures.chain_delay_s(base))
+    assert fixtures.chain_delay_s(conv) == pytest.approx(50.0 / (0.66 * fixtures.C0))
     assert "cable" in legacy["hardware"]    # input not modified
 
 
 def test_bare_id_reuses_parent_element(tmp_path, base):
-    doc = {"fixture_id": "rx_lna", "extends": BASE_ID, "hardware": {"chain": ["pad30", "cable50", LNA]}}
+    ids = [el["id"] for el in base["hardware"]["chain"]]
+    doc = {"fixture_id": "rx_lna", "extends": BASE_ID, "hardware": {"chain": ids + [LNA]}}
     fx = fixtures.load(write(tmp_path / "c.yaml", doc))
-    assert fx["hardware"]["chain"][:2] == base["hardware"]["chain"]
+    assert fx["hardware"]["chain"][:-1] == base["hardware"]["chain"]
     doc["hardware"]["chain"] = ["pad20"]
     with pytest.raises(fixtures.FixtureError, match="not an element of the parent"):
         fixtures.load(write(tmp_path / "d.yaml", doc))
