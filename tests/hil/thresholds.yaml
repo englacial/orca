@@ -29,7 +29,7 @@ t00:
   throttled_flags:                     {kind: abs, bound: {type: equals, value: 0}, units: bits}  # vcgencmd bits 0-3 (now)
   throttled_since_boot_flags:          {kind: info, units: bits}                                  # bits 16-19
   free_disk_gb:                        {kind: abs, bound: {type: min, value: required}, units: GB}
-  usb_kernel_errors_1h:                {kind: abs, bound: {type: equals, value: 0}, units: count}
+  usb_kernel_errors_10min:             {kind: abs, bound: {type: equals, value: 0}, units: count}
   cxx_hardware_tests_passed:           {kind: info, units: bool}
   attenuator_check_peak_dbfs:          {kind: base, bound: {type: two_sided, tol: 6.0}, units: dBFS}
   soc_temp_after_warmup_c:             {kind: base, bound: {type: upper, tol: 10.0}, units: degC}

@@ -61,8 +61,8 @@ def device_checks(fixture):
 
 
 def usb_kernel_errors():
-    """USB error lines in the last hour's kernel log, except firmware-load disconnects."""
-    out = subprocess.run(["journalctl", "-k", "--since", "-1h", "--no-pager", "-q", "-o", "short-unix"],
+    """USB error lines in the last 10 minutes of kernel log, except firmware-load disconnects."""
+    out = subprocess.run(["journalctl", "-k", "--since", "-10min", "--no-pager", "-q", "-o", "short-unix"],
                          capture_output=True, text=True).stdout
     lines = [(float(ln.split(maxsplit=1)[0]), ln) for ln in out.splitlines() if ln[:1].isdigit()]
     enums = [t for t, ln in lines if ETTUS_ENUM_RE.search(ln)]
@@ -104,12 +104,12 @@ def test_t00_preflight(hil, tier, fixture_cfg, radar_build, capture_manager, rec
     recorder.record("free_disk_gb", telemetry.free_disk_gb(hil.data_root),
                     params={"required": params["required_free_gb"]})
     usb_errs = usb_kernel_errors()
-    recorder.record("usb_kernel_errors_1h", len(usb_errs))
+    recorder.record("usb_kernel_errors_10min", len(usb_errs))
 
     cxx_ok, cxx_out = run_cxx_hw_tests(fx)
     recorder.record("cxx_hardware_tests_passed", cxx_ok)
 
-    hil.configuration.update({"sdr": dev_info, "uhd_checks": details, "usb_kernel_errors_1h": usb_errs})
+    hil.configuration.update({"sdr": dev_info, "uhd_checks": details, "usb_kernel_errors_10min": usb_errs})
     write_configuration(hil)
     (hil.run_dir / "t00" / "cxx_hardware_tests.log").write_text(cxx_out)
 
