@@ -7,7 +7,7 @@ from pathlib import Path
 import pytest
 
 from tests.hil.conftest import write_configuration
-from tests.hil.orca_hil import radar, testkit
+from tests.hil.orca_hil import fixtures, radar, testkit
 from tests.hil.orca_hil.analysis.common import db10
 from tests.hil.orca_hil.analysis.profile import locate_peaks
 from tests.hil.orca_hil.analysis.common import open_capture
@@ -92,7 +92,7 @@ def test_t00_preflight(hil, tier, fixture_cfg, radar_build, capture_manager, rec
         recorder.record(name, ok)
 
     # A power amplifier's disable_command is the first contact with the SDR, so the FPGA load
-    # leaves its enable line inactive, and runs again after each UHD tool step
+    # leaves its enable line inactive, and runs again after the UHD tool step
     from tests.hil.orca_hil import watchdog
     disable_log = []
     watchdog.disable_amplifiers(fx, disable_log.append, radar.uhd_env(fx))
@@ -112,9 +112,14 @@ def test_t00_preflight(hil, tier, fixture_cfg, radar_build, capture_manager, rec
     usb_errs = usb_kernel_errors()
     recorder.record("usb_kernel_errors_10min", len(usb_errs))
 
-    cxx_ok, cxx_out = run_cxx_hw_tests(fx)
-    watchdog.disable_amplifiers(fx, disable_log.append, radar.uhd_env(fx))
-    recorder.record("cxx_hardware_tests_passed", cxx_ok)
+    # The C++ hardware tests open the SDR without driving a power amplifier's enable line, so
+    # with a PA in the chain it would stay enabled for several seconds per test: skip them
+    if fixtures.watchdogs(fx):
+        cxx_out = "skipped: power amplifier in the chain\n"
+        recorder.record("cxx_hardware_tests_passed", None, note="skipped: power amplifier in the chain")
+    else:
+        cxx_ok, cxx_out = run_cxx_hw_tests(fx)
+        recorder.record("cxx_hardware_tests_passed", cxx_ok)
 
     hil.configuration.update({"sdr": dev_info, "uhd_checks": details, "usb_kernel_errors_10min": usb_errs})
     write_configuration(hil)
