@@ -40,7 +40,7 @@ ELEMENT_FIELDS = {
     "filter": ({"loss_db"}, {"loss_tol_db", "passband_mhz", "stopband_rejection_db"}),
     "amplifier": ({"role", "gain_db"}, {"gain_tol_db", "nf_db", "p1db_out_dbm", "powered", "supply",
                                         "watchdog", "max_gain_db", "max_output_dbm", "max_enable_duty",
-                                        "startup_burst_dbm", "radar_config"}),
+                                        "startup_burst_dbm", "radar_config", "disable_command"}),
 }
 # Amplifier fields for a power amplifier:
 #   max_gain_db        gain used by the power budget (e.g. the gain at maximum VVA setting until
@@ -52,6 +52,10 @@ ELEMENT_FIELDS = {
 #   radar_config       radar config merged into every capture last (e.g. the GPIO enable pin)
 #   watchdog           {status_file, max_age_s}: captures run only while an external watchdog
 #                      reports itself armed in status_file (orca_hil/watchdog.py)
+#   disable_command    command (list of strings) that puts the amp in shutdown through the SDR,
+#                      e.g. drives its enable GPIO inactive. The harness runs it before its first
+#                      contact with the SDR (an FPGA load leaves the GPIO at its default), after
+#                      each UHD tool step in T0, and at session end (orca_hil/watchdog.py)
 SOURCES = ("datasheet", "measured", "estimate")
 UNRATED_SAFE_DBM = 20.0     # elements that can see more than this from a power amplifier need a rating
 AMP_ROLES = ("lna", "pa")
@@ -201,6 +205,8 @@ def validate(fx):
         if el["type"] == "amplifier" and el["role"] == "pa":
             if "watchdog" not in el:
                 raise FixtureError(f"{fid}: power amplifier {el['id']} needs a watchdog")
+            if "disable_command" not in el:
+                raise FixtureError(f"{fid}: power amplifier {el['id']} needs a disable_command")
             pa = el["id"]
             peak = max(value_at(el.get(k), f0, -math.inf)
                        for k in ("p1db_out_dbm", "max_output_dbm", "startup_burst_dbm"))
@@ -231,6 +237,9 @@ def validate_element(label, el):
         w = el["watchdog"]
         if not isinstance(w, dict) or "status_file" not in w or set(w) - {"status_file", "max_age_s"}:
             raise FixtureError(f"{label}: watchdog must be {{status_file[, max_age_s]}}")
+    if "disable_command" in el and not (isinstance(el["disable_command"], list) and el["disable_command"]
+                                        and all(isinstance(a, str) for a in el["disable_command"])):
+        raise FixtureError(f"{label}: disable_command must be a non-empty list of strings")
     if "radar_config" in el and not isinstance(el["radar_config"], dict):
         raise FixtureError(f"{label}: radar_config must be a mapping of config sections")
     if "max_enable_duty" in el and not 0 < float(el["max_enable_duty"]) <= 1:

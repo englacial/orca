@@ -64,6 +64,35 @@ def check(specs, min_remaining_s=0.0):
             raise WatchdogError(f"{el_id}: {why}")
 
 
+DISABLE_TIMEOUT_S = 60
+
+
+def disable_amplifiers(fixture, log=None, env=None):
+    """Run every chain element's disable_command; raise WatchdogError if one fails.
+
+    Returns [(element id, output)]. Used before the first contact with the SDR, after UHD
+    tool steps, and at session end, so an amplifier enable line is never left active.
+    """
+    import subprocess
+    out = []
+    for el in fixture.get("hardware", {}).get("chain", []):
+        cmd = el.get("disable_command")
+        if not cmd:
+            continue
+        argv = [str(Path(cmd[0]).expanduser())] + list(cmd[1:])
+        try:
+            p = subprocess.run(argv, capture_output=True, text=True, timeout=DISABLE_TIMEOUT_S, env=env)
+        except (OSError, subprocess.TimeoutExpired) as e:
+            raise WatchdogError(f"{el['id']}: disable_command {argv} failed: {e}")
+        text = (p.stdout + p.stderr).strip()
+        if log is not None:
+            log(f"{el['id']}: disable_command exit {p.returncode}: {text[-300:]}")
+        if p.returncode != 0:
+            raise WatchdogError(f"{el['id']}: disable_command exit {p.returncode}: {text[-300:]}")
+        out.append((el["id"], text))
+    return out
+
+
 class Monitor:
     """Stops ``proc`` (SIGINT, then SIGKILL) if any watchdog stops being armed while it runs."""
 

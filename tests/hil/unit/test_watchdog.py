@@ -74,7 +74,7 @@ def test_monitor_leaves_healthy_run_alone(spec, tmp_path):
 def pa_element(spec, **kw):
     el = {"id": "pa", "type": "amplifier", "role": "pa", "gain_db": 26.5, "max_gain_db": 57.3,
           "max_input_dbm": 10, "max_output_dbm": 10, "startup_burst_dbm": 43.4, "max_enable_duty": 0.15,
-          "powered": True, "watchdog": spec,
+          "powered": True, "watchdog": spec, "disable_command": ["true"],
           "radar_config": {"GPIO": {"pwr_amp_pin": "2", "pwr_amp_active_low": True},
                            "GENERATE": {"pulse_length": 18e-6}, "CHIRP": {"tx_duration": 18e-6, "tx_lead": 1.5e-6}}}
     el.update(kw)
@@ -155,3 +155,17 @@ def test_peak_pairing_with_buried_leakage():
     assert find_loopback_peaks(p, 15.0, expected_leak=75.0) == (76, 91)
     p[70:85] = 1e-4             # leakage fully buried: placed at the expected separation
     assert find_loopback_peaks(p, 15.0, expected_leak=75.0) == (76.0, 91)
+
+
+def test_pa_needs_disable_command_and_it_is_run(tmp_path, spec):
+    fx = pa_fixture(tmp_path, spec, disable_command=["true"])
+    log = []
+    assert [i for i, _ in watchdog.disable_amplifiers(fx, log.append)] == ["pa"] and "exit 0" in log[0]
+    fx = pa_fixture(tmp_path, spec, disable_command=["false"])
+    with pytest.raises(watchdog.WatchdogError, match="exit 1"):
+        watchdog.disable_amplifiers(fx)
+    doc = yamlio.load(tmp_path / "pa.yaml")
+    del doc["hardware"]["chain"][0]["disable_command"]
+    yamlio.dump(doc, tmp_path / "pa3.yaml")
+    with pytest.raises(fixtures.FixtureError, match="needs a disable_command"):
+        fixtures.load(tmp_path / "pa3.yaml")

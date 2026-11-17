@@ -91,7 +91,13 @@ def test_t00_preflight(hil, tier, fixture_cfg, radar_build, capture_manager, rec
     for name, ok in checks.items():
         recorder.record(name, ok)
 
+    # A power amplifier's disable_command is the first contact with the SDR, so the FPGA load
+    # leaves its enable line inactive, and runs again after each UHD tool step
+    from tests.hil.orca_hil import watchdog
+    disable_log = []
+    watchdog.disable_amplifiers(fx, disable_log.append, radar.uhd_env(fx))
     dev_checks, dev_info = device_checks(fx)
+    watchdog.disable_amplifiers(fx, disable_log.append, radar.uhd_env(fx))
     for name, ok in dev_checks.items():
         recorder.record(name, ok)
     serial = dev_info["serials_found"][0] if dev_info["serials_found"] else None
@@ -107,11 +113,14 @@ def test_t00_preflight(hil, tier, fixture_cfg, radar_build, capture_manager, rec
     recorder.record("usb_kernel_errors_10min", len(usb_errs))
 
     cxx_ok, cxx_out = run_cxx_hw_tests(fx)
+    watchdog.disable_amplifiers(fx, disable_log.append, radar.uhd_env(fx))
     recorder.record("cxx_hardware_tests_passed", cxx_ok)
 
     hil.configuration.update({"sdr": dev_info, "uhd_checks": details, "usb_kernel_errors_10min": usb_errs})
     write_configuration(hil)
     (hil.run_dir / "t00" / "cxx_hardware_tests.log").write_text(cxx_out)
+    if disable_log:
+        (hil.run_dir / "t00" / "disable_command.log").write_text("\n".join(disable_log) + "\n")
 
     # Abort before any RF test if the software/device checks failed
     if recorder.failures:

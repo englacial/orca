@@ -338,6 +338,13 @@ def pytest_sessionfinish(session, exitstatus):
     ctx = session.config._hil
     if ctx is None:
         return
+    if any(el.get("disable_command") for el in ctx.fixture["hardware"]["chain"]):
+        try:     # leave amplifier enable lines inactive, whatever happened in the session
+            from tests.hil.orca_hil.radar import uhd_env
+            watchdog.disable_amplifiers(ctx.fixture, print, uhd_env(ctx.fixture))
+        except watchdog.WatchdogError as e:
+            print(f"\nDISABLE FAILED: {e}", file=sys.stderr)
+            ctx.halted = ctx.halted or f"disable at session end failed: {e}"
     duration = time.time() - ctx.t0
     th = load_thresholds().get("session", {})
     session_metrics = []
