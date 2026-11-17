@@ -40,7 +40,8 @@ ELEMENT_FIELDS = {
     "filter": ({"loss_db"}, {"loss_tol_db", "passband_mhz", "stopband_rejection_db"}),
     "amplifier": ({"role", "gain_db"}, {"gain_tol_db", "nf_db", "p1db_out_dbm", "powered", "supply",
                                         "watchdog", "max_gain_db", "max_output_dbm", "max_enable_duty",
-                                        "startup_burst_dbm", "radar_config", "disable_command"}),
+                                        "startup_burst_dbm", "radar_config", "radar_config_min",
+                                        "disable_command"}),
 }
 # Amplifier fields for a power amplifier:
 #   max_gain_db        gain used by the power budget (e.g. the gain at maximum VVA setting until
@@ -50,6 +51,8 @@ ELEMENT_FIELDS = {
 #   startup_burst_dbm  output of bursts the amp emits independently of the drive (e.g. at radar
 #                      start); followed through the rest of the chain by the budget
 #   radar_config       radar config merged into every capture last (e.g. the GPIO enable pin)
+#   radar_config_min   numeric radar config minimums applied after that, so a test's larger value
+#                      is kept (e.g. CHIRP.rx_duration long enough for a padded pulse)
 #   watchdog           {status_file, max_age_s}: captures run only while an external watchdog
 #                      reports itself armed in status_file (orca_hil/watchdog.py)
 #   disable_command    command (list of strings) that puts the amp in shutdown through the SDR,
@@ -240,6 +243,10 @@ def validate_element(label, el):
     if "disable_command" in el and not (isinstance(el["disable_command"], list) and el["disable_command"]
                                         and all(isinstance(a, str) for a in el["disable_command"])):
         raise FixtureError(f"{label}: disable_command must be a non-empty list of strings")
+    if "radar_config_min" in el and not (isinstance(el["radar_config_min"], dict) and all(
+            isinstance(v, dict) and all(isinstance(x, (int, float)) and not isinstance(x, bool) for x in v.values())
+            for v in el["radar_config_min"].values())):
+        raise FixtureError(f"{label}: radar_config_min must map config sections to numeric minimums")
     if "radar_config" in el and not isinstance(el["radar_config"], dict):
         raise FixtureError(f"{label}: radar_config must be a mapping of config sections")
     if "max_enable_duty" in el and not 0 < float(el["max_enable_duty"]) <= 1:
@@ -478,6 +485,17 @@ def chain_radar_config(fixture):
     for el in fixture["hardware"]["chain"]:
         for section, vals in (el.get("radar_config") or {}).items():
             out.setdefault(section, {}).update(vals)
+    return out
+
+
+def chain_radar_config_min(fixture):
+    """The chain elements' radar_config_min, combined (largest minimum wins)."""
+    out = {}
+    for el in fixture["hardware"]["chain"]:
+        for section, vals in (el.get("radar_config_min") or {}).items():
+            sec = out.setdefault(section, {})
+            for k, v in vals.items():
+                sec[k] = max(sec.get(k, v), v)
     return out
 
 

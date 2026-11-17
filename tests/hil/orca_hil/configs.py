@@ -4,7 +4,7 @@ import os
 from pathlib import Path
 
 from . import REPO_ROOT, yamlio
-from .fixtures import FixtureError, budget_problems, chain_radar_config, duty_problems
+from .fixtures import FixtureError, budget_problems, chain_radar_config, chain_radar_config_min, duty_problems
 
 # Section 2.3 of the HIL plan: values applied over config/default.yaml's structure.
 BASE_OVERRIDES = {
@@ -52,8 +52,16 @@ def base_config() -> dict:
 def merged_config(fixture: dict, overrides: dict) -> dict:
     rf_base = {k: v for k, v in (fixture.get("rf_base") or {}).items() if v is not None}
     cfg = deep_merge(deep_merge(base_config(), {"RF0": rf_base}), overrides)
-    # Chain elements' radar_config (e.g. a power amplifier's enable pin) last, so no test overrides it
-    return deep_merge(cfg, chain_radar_config(fixture)) if "hardware" in fixture else cfg
+    # Chain elements' radar_config (e.g. a power amplifier's enable pin) last, so no test overrides it,
+    # then their radar_config_min as minimums, so a test's larger value is kept
+    if "hardware" not in fixture:
+        return cfg
+    cfg = deep_merge(cfg, chain_radar_config(fixture))
+    for section, vals in chain_radar_config_min(fixture).items():
+        for k, v in vals.items():
+            cur = cfg.setdefault(section, {}).get(k)
+            cfg[section][k] = v if cur is None else max(float(cur), v)
+    return cfg
 
 
 def _is_integer(x, tol=1e-9):

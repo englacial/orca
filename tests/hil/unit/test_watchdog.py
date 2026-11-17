@@ -169,3 +169,11 @@ def test_pa_needs_disable_command_and_it_is_run(tmp_path, spec):
     yamlio.dump(doc, tmp_path / "pa3.yaml")
     with pytest.raises(fixtures.FixtureError, match="needs a disable_command"):
         fixtures.load(tmp_path / "pa3.yaml")
+
+
+def test_radar_config_min_keeps_larger_test_values(tmp_path, spec):
+    fx = pa_fixture(tmp_path, spec, radar_config_min={"CHIRP": {"rx_duration": 33e-6}})
+    assert configs.merged_config(fx, {})["CHIRP"]["rx_duration"] == pytest.approx(33e-6)
+    assert configs.merged_config(fx, {"CHIRP": {"rx_duration": 100e-6}})["CHIRP"]["rx_duration"] == pytest.approx(100e-6)
+    with pytest.raises(fixtures.FixtureError, match="radar_config_min"):
+        pa_fixture(tmp_path, spec, radar_config_min={"CHIRP": {"rx_duration": "long"}})
