@@ -475,6 +475,7 @@ int UHD_SAFE_MAIN(int argc, char *argv[]) {
   rx_metadata_t rx_md; // Captures metadata from rx_stream->recv() -- specifically primarily timeouts and other errors
 
   float inversion_phase; // Store phase to use for phase inversion of this chirp
+  int recv_timeouts = 0; // Consecutive short recv() timeouts
   
   ofstream gps_output("gps_log.txt");
 
@@ -496,7 +497,18 @@ int UHD_SAFE_MAIN(int argc, char *argv[]) {
       break;
     }
 
-    n_samps_in_rx_buff = sdr.getRxStream()->recv(buffs, num_rx_samps, rx_md, 60.0, false); // TODO: Think about timeout
+    // Wait in short steps, so that a stop request is noticed while no data is arriving
+    n_samps_in_rx_buff = sdr.getRxStream()->recv(buffs, num_rx_samps, rx_md, 0.5, false);
+    if (rx_md.error_code == rx_metadata_t::ERROR_CODE_TIMEOUT && n_samps_in_rx_buff == 0) {
+      if (stop_signal_called) {
+        cout_mutex.lock();
+        cout << "[RX] stop signal called and no data for 0.5 s -> break" << endl;
+        cout_mutex.unlock();
+        break;
+      }
+      if (++recv_timeouts < 120) continue; // 120 x 0.5 s: report a timeout after 60 s, as before
+    }
+    recv_timeouts = 0;
 
     // Check for errors in the RX buffer
     handleRxBuffer(n_samps_in_rx_buff, rx_md, chirp, buff, sample_sum, inversion_phase);
