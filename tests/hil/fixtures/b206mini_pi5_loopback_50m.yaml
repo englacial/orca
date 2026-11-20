@@ -20,12 +20,12 @@ host:
   data_root: /mnt/nvme/orca-hil
   results_repo: ~/orca-hil-testing-results   # clone of englacial/orca-hil-testing-results
 uhd:
-  source_dir: ~/uhd
-  install_prefix: ~/uhd-patched
-  expected_commit: c87abfbe8fb96cd1dc9e5d10fcf50d792b60c452
+  source_dir: ~/uhd-gpio            # ~/uhd + front-panel GPIO pins left as inputs at initialisation
+  install_prefix: ~/uhd-patched-gpio
+  expected_commit: c3e2439c5112c5fbfb56db1d2bb856429adf7cb5
   fpga_image: usrp_b205mini_fpga.bin   # the B206mini uses the B205mini image
   env:
-    UHD_IMAGES_DIR: ~/uhd-patched/share/uhd/images
+    UHD_IMAGES_DIR: ~/uhd-patched-gpio/share/uhd/images
 storage:
   kept_raw_quota_gb: 100
   run_retention_days: 60

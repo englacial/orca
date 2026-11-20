@@ -89,7 +89,9 @@ def build_radar(fixture, repo_root=REPO_ROOT, log_path=None) -> RadarBuild:
     prefix = uhd_prefix(fixture)
     build = Path(repo_root) / "sdr" / "build"
     cmds = [
-        ["cmake", "-S", "sdr", "-B", "sdr/build", f"-DCMAKE_PREFIX_PATH={prefix}",
+        # -U: drop the UHD found by an earlier configure, or an old build directory keeps linking it
+        ["cmake", "-S", "sdr", "-B", "sdr/build", "-UUHD_LIBRARIES", "-UUHD_INCLUDE_DIRS",
+         f"-DCMAKE_PREFIX_PATH={prefix}",
          f"-DUHD_DIR={prefix}/lib/cmake/uhd", f"-DCMAKE_BUILD_RPATH={prefix}/lib"],
         ["cmake", "--build", "sdr/build", "--target", "radar", "-j4"],
     ]

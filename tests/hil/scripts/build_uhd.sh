@@ -5,11 +5,11 @@
 # and sdr/ share one Boost and one compiler.
 #
 # Usage: build_uhd.sh [source_dir] [install_prefix]
-#   defaults: ~/uhd  ~/uhd-patched
+#   defaults: ~/uhd-gpio  ~/uhd-patched-gpio
 set -euo pipefail
 
-SRC=$(realpath "${1:-$HOME/uhd}")
-PREFIX=$(realpath -m "${2:-$HOME/uhd-patched}")
+SRC=$(realpath "${1:-$HOME/uhd-gpio}")
+PREFIX=$(realpath -m "${2:-$HOME/uhd-patched-gpio}")
 BUILD="$SRC/host/build"
 
 if [[ -z "${CONDA_PREFIX:-}" ]]; then

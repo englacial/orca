@@ -92,7 +92,7 @@ Elements that can see more than +20 dBm from the PA must have a rating.
 
 ## UHD
 
-The fixture uses a UHD built from `~/uhd` by `scripts/build_uhd.sh`
+The fixture uses a UHD built from `~/uhd-gpio` by `scripts/build_uhd.sh`
 (`make hil-build-uhd`), never conda's or apt's. T0 checks that the radar
 binary links against it and that the build matches the source checkout.
 
